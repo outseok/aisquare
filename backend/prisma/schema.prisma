@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  walletAddress String    @unique
+  passVerified  Boolean   @default(false)
+  phoneHash     String?   @unique
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  products  Product[]
+  orders    Order[]
+  reviews   Review[]
+  reports   Report[]
+  pointLogs PointLog[]
+
+  @@map("users")
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  sellerId    String
+  seller      User          @relation(fields: [sellerId], references: [id])
+  title       String
+  description String
+  imageKey    String?
+  fileKey     String
+  fileType    FileType
+  priceEth    Decimal       @db.Decimal(30, 18)
+  mintingTime MintingTime
+  isVisible   Boolean       @default(true)
+  status      ProductStatus @default(ON_SALE)
+  tags        String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order   Order?
+  reviews Review[]
+
+  @@map("products")
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  buyerId       String
+  buyer         User        @relation(fields: [buyerId], references: [id])
+  productId     String      @unique
+  product       Product     @relation(fields: [productId], references: [id])
+  paymentMethod PayMethod
+  amountEth     Decimal     @db.Decimal(30, 18)
+  amountRp      Int?
+  status        OrderStatus @default(PENDING_CONFIRMATION)
+  autoConfirmAt DateTime
+  settledAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports Report[]
+  review  Review?
+
+  @@map("orders")
+}
+
+model Review {
+  id         String  @id @default(cuid())
+  orderId    String  @unique
+  order      Order   @relation(fields: [orderId], references: [id])
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  reviewerId String
+  reviewer   User    @relation(fields: [reviewerId], references: [id])
+  rating     Int
+  content    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  orderId    String
+  order      Order        @relation(fields: [orderId], references: [id])
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  reason     String
+  imageKeys  String[]
+  status     ReportStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reports")
+}
+
+model PointLog {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  type      PointLogType
+  amount    Int
+  balance   Int
+  memo      String?
+
+  createdAt DateTime @default(now())
+
+  @@map("point_logs")
+}
+
+model AdminLog {
+  id       String  @id @default(cuid())
+  adminId  String
+  action   String
+  targetId String?
+  meta     Json?
+
+  createdAt DateTime @default(now())
+
+  @@map("admin_logs")
+}
+
+enum FileType {
+  PDF
+  JPG
+  PNG
+  MP4
+}
+
+enum ProductStatus {
+  ON_SALE
+  SOLD
+  HIDDEN
+}
+
+enum MintingTime {
+  IMMEDIATE
+  ON_PURCHASE
+  MANUAL
+}
+
+enum PayMethod {
+  ETH
+  RP
+}
+
+enum OrderStatus {
+  PAYMENT_PENDING
+  PAYMENT_COMPLETE
+  PENDING_CONFIRMATION
+  CONFIRMED
+  SETTLEMENT_HOLD
+  REFUNDED
+}
+
+enum ReportStatus {
+  PENDING
+  IN_REVIEW
+  REFUNDED
+  APPROVED
+}
+
+enum PointLogType {
+  EARN_SALE
+  EARN_BONUS
+  USE_PURCHASE
+  CHARGE
+  CONVERT
+}

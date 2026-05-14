@@ -1,0 +1,28 @@
+import { IsString, IsNumber, IsEnum, IsOptional, IsArray, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { FileType, MintingTime } from '@prisma/client';
+
+export class CreateProductDto {
+  @ApiProperty({ example: 'GPT-4 프롬프트 완전 정복 가이드' })
+  @IsString()
+  title: string;
+
+  @ApiProperty({ example: '이 가이드를 통해 GPT-4를 200% 활용하세요...' })
+  @IsString()
+  description: string;
+
+  @ApiProperty({ example: 0.01, description: 'ETH 단위 가격' })
+  @IsNumber()
+  @Min(0)
+  priceEth: number;
+
+  @ApiProperty({ enum: MintingTime })
+  @IsEnum(MintingTime)
+  mintingTime: MintingTime;
+
+  @ApiPropertyOptional({ type: [String], example: ['GPT', 'AI', '프롬프트'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+}

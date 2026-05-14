@@ -1,0 +1,7 @@
+# Claude IDE settings
+.claude/
+
+# Backend (handled by backend/.gitignore too)
+backend/.env
+backend/node_modules/
+backend/dist/
