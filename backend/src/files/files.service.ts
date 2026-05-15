@@ -5,6 +5,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getSignedUrl as getCFSignedUrl } from '@aws-sdk/cloudfront-signer';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import * as crypto from 'crypto';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -25,7 +26,16 @@ export class FilesService {
   private readonly cfDomain = process.env.AWS_CLOUDFRONT_DOMAIN;
   private readonly cfKeyPairId = process.env.AWS_CLOUDFRONT_KEY_PAIR_ID;
   private readonly cfPrivateKey = process.env.AWS_CLOUDFRONT_PRIVATE_KEY
-    ? Buffer.from(process.env.AWS_CLOUDFRONT_PRIVATE_KEY, 'base64').toString('utf-8')
+    ? (() => {
+        const pem = Buffer.from(process.env.AWS_CLOUDFRONT_PRIVATE_KEY!, 'base64').toString('utf-8');
+        try {
+          // Node 18+ (OpenSSL 3)에서 PKCS#1 키를 PKCS#8로 변환
+          const keyObj = crypto.createPrivateKey(pem);
+          return keyObj.export({ type: 'pkcs8', format: 'pem' }) as string;
+        } catch {
+          return pem;
+        }
+      })()
     : undefined;
   private readonly clamavLambdaArn = process.env.AWS_CLAMAV_LAMBDA_ARN;
 

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { IpfsService } from '../ipfs/ipfs.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto, SortOrder } from './dto/query-product.dto';
@@ -7,7 +8,10 @@ import { FileType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ipfsService: IpfsService,
+  ) {}
 
   async create(
     sellerId: string,
@@ -32,6 +36,27 @@ export class ProductsService {
     });
 
     await this.grantFirstProductBonus(sellerId);
+
+    if (dto.mintingTime === 'IMMEDIATE') {
+      const metadata = this.ipfsService.buildMetadata({
+        title: product.title,
+        description: product.description,
+        fileType: product.fileType,
+        priceEth: product.priceEth.toString(),
+        sellerWallet: product.seller.walletAddress,
+        tags: product.tags,
+        productId: product.id,
+      });
+      const metadataUri = await this.ipfsService.uploadNftMetadata(metadata);
+      if (metadataUri) {
+        await this.prisma.product.update({
+          where: { id: product.id },
+          data: { metadataUri },
+        });
+        return { ...product, metadataUri };
+      }
+    }
+
     return product;
   }
 

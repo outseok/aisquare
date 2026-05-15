@@ -16,11 +16,12 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  products  Product[]
-  orders    Order[]
-  reviews   Review[]
-  reports   Report[]
-  pointLogs PointLog[]
+  products          Product[]
+  orders            Order[]
+  reviews           Review[]
+  reports           Report[]
+  pointLogs         PointLog[]
+  verificationLogs  VerificationLog[]
 
   @@map("users")
 }
@@ -39,6 +40,7 @@ model Product {
   isVisible   Boolean       @default(true)
   status      ProductStatus @default(ON_SALE)
   tags        String[]
+  metadataUri String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,6 +132,21 @@ model AdminLog {
   @@map("admin_logs")
 }
 
+model VerificationLog {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id])
+  walletAddress String
+  type          VerificationType
+  status        VerifyStatus
+  phoneHash     String?
+  meta          Json?
+
+  createdAt DateTime @default(now())
+
+  @@map("verification_logs")
+}
+
 enum FileType {
   PDF
   JPG
@@ -176,4 +193,15 @@ enum PointLogType {
   USE_PURCHASE
   CHARGE
   CONVERT
+}
+
+enum VerificationType {
+  WALLET_REGISTER
+  PASS
+  PHONE
+}
+
+enum VerifyStatus {
+  SUCCESS
+  FAILED
 }

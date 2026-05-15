@@ -2,6 +2,7 @@ import {
   Injectable, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { IpfsService } from '../ipfs/ipfs.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Prisma } from '@prisma/client';
 import { ProductsService } from '../products/products.service';
@@ -13,6 +14,7 @@ const RP_PER_ETH = 10_000_000; // 10,000 RP = 0.001 ETH → 1 ETH = 10,000,000 R
 export class OrdersService {
   constructor(
     private prisma: PrismaService,
+    private ipfsService: IpfsService,
     private productsService: ProductsService,
     private filesService: FilesService,
   ) {}
@@ -20,6 +22,7 @@ export class OrdersService {
   async create(buyerId: string, dto: CreateOrderDto) {
     const product = await this.prisma.product.findUnique({
       where: { id: dto.productId },
+      include: { seller: { select: { walletAddress: true } } },
     });
     if (!product) throw new NotFoundException('상품을 찾을 수 없습니다');
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
@@ -61,6 +64,25 @@ export class OrdersService {
 
     await this.grantSaleBonus(product.sellerId, Number(amountEth), product.title);
     await this.productsService.checkMilestoneBonuses(product.sellerId);
+
+    if (product.mintingTime === 'ON_PURCHASE') {
+      const metadata = this.ipfsService.buildMetadata({
+        title: product.title,
+        description: product.description,
+        fileType: product.fileType,
+        priceEth: product.priceEth.toString(),
+        sellerWallet: product.seller.walletAddress,
+        tags: product.tags,
+        productId: product.id,
+      });
+      const metadataUri = await this.ipfsService.uploadNftMetadata(metadata);
+      if (metadataUri) {
+        await this.prisma.product.update({
+          where: { id: product.id },
+          data: { metadataUri },
+        });
+      }
+    }
 
     return order;
   }

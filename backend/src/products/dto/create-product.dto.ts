@@ -1,4 +1,5 @@
 import { IsString, IsNumber, IsEnum, IsOptional, IsArray, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FileType, MintingTime } from '@prisma/client';
 
@@ -12,6 +13,7 @@ export class CreateProductDto {
   description: string;
 
   @ApiProperty({ example: 0.01, description: 'ETH 단위 가격' })
+  @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   @Min(0)
   priceEth: number;
@@ -22,6 +24,10 @@ export class CreateProductDto {
 
   @ApiPropertyOptional({ type: [String], example: ['GPT', 'AI', '프롬프트'] })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    try { return JSON.parse(value); } catch { return [value]; }
+  })
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
