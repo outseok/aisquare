@@ -2,6 +2,7 @@ import { Controller, Post, Get, Patch, Param, Body, UseGuards, Request } from '@
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ConfirmTossPaymentDto } from './dto/confirm-toss-payment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PassVerifiedGuard } from '../auth/pass-verified.guard';
 
@@ -29,6 +30,17 @@ export class OrdersController {
   @ApiOperation({ summary: '내 판매 내역' })
   getSellHistory(@Request() req) {
     return this.ordersService.getSellHistory(req.user.id);
+  }
+
+  @Post(':id/pay/toss')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: 'Toss 결제 승인 (결제창 완료 후 호출)' })
+  confirmTossPayment(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() dto: ConfirmTossPaymentDto,
+  ) {
+    return this.ordersService.confirmTossPayment(id, req.user.id, dto);
   }
 
   @Patch(':id/confirm')

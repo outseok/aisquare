@@ -1,8 +1,10 @@
 import {
   Injectable, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
+import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ConfirmTossPaymentDto } from './dto/confirm-toss-payment.dto';
 import { ProductsService } from '../products/products.service';
 import { FilesService } from '../files/files.service';
 import { TokenService } from '../token/token.service';
@@ -35,7 +37,7 @@ export class OrdersService {
           paymentMethod: dto.paymentMethod,
           paymentAmount,
           autoConfirmAt,
-          status: 'PENDING_CONFIRMATION',
+          status: 'PAYMENT_PENDING',
         },
       });
 
@@ -47,10 +49,44 @@ export class OrdersService {
       return newOrder;
     });
 
-    await this.grantSaleBonus(product.sellerId, product.price, product.title);
-    await this.productsService.checkMilestoneBonuses(product.sellerId);
-
     return order;
+  }
+
+  async confirmTossPayment(orderId: string, buyerId: string, dto: ConfirmTossPaymentDto) {
+    const order = await this.getOrderOrThrow(orderId);
+    if (order.buyerId !== buyerId) throw new ForbiddenException();
+    if (order.status !== 'PAYMENT_PENDING') {
+      throw new BadRequestException('결제 대기 상태가 아닙니다');
+    }
+    if (order.paymentAmount !== dto.amount) {
+      throw new BadRequestException(`결제 금액 불일치: 주문금액 ${order.paymentAmount}원`);
+    }
+
+    const secretKey = process.env.TOSS_SECRET_KEY;
+    if (!secretKey) throw new BadRequestException('결제 서비스 설정이 필요합니다');
+
+    const auth = Buffer.from(`${secretKey}:`).toString('base64');
+    try {
+      await axios.post(
+        'https://api.tosspayments.com/v1/payments/confirm',
+        { paymentKey: dto.paymentKey, orderId, amount: dto.amount },
+        { headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' } },
+      );
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Toss 결제 승인 실패';
+      throw new BadRequestException(msg);
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'PENDING_CONFIRMATION', txHash: dto.paymentKey },
+      include: { product: { select: { sellerId: true, title: true, price: true } } },
+    });
+
+    await this.grantSaleBonus(updated.product.sellerId, updated.product.price, updated.product.title);
+    await this.productsService.checkMilestoneBonuses(updated.product.sellerId);
+
+    return updated;
   }
 
   async confirm(orderId: string, buyerId: string) {
@@ -154,13 +190,6 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
     });
     return latest?.balance || 0;
-  }
-
-  private async deductPoints(userId: string, amount: number, memo: string) {
-    const balance = await this.getPointBalance(userId);
-    await this.prisma.pointLog.create({
-      data: { userId, type: 'USE_PURCHASE', amount: -amount, balance: balance - amount, memo },
-    });
   }
 
   private async grantSaleBonus(sellerId: string, priceKrw: number, productTitle: string) {
