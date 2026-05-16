@@ -52,7 +52,7 @@ export class ReportsService {
       reportId: report.id,
       orderId,
       productTitle: order.product.title,
-      reporterName: reporter?.name || reporterId,
+      reporterName: reporter ? `${reporter.name} (${reporter.username})` : reporterId,
       reason: dto.reason,
     });
 
