@@ -20,6 +20,7 @@ model User {
   isAdmin          Boolean    @default(false)
   status           UserStatus @default(ACTIVE)
   trustToken       Float      @default(15)
+  bio              String?  @db.Text
   passId           String?
   squareWalletAddr String?
   pointWalletAddr  String?

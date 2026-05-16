@@ -9,6 +9,7 @@ import axios from 'axios';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyPhoneDto } from './dto/verify-phone.dto';
+import { UpdateBioDto } from './dto/update-bio.dto';
 
 @Injectable()
 export class AuthService {
@@ -123,6 +124,14 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException();
     return this.sanitize(user);
+  }
+
+  async updateBio(userId: string, dto: UpdateBioDto) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { bio: dto.bio ?? null },
+    });
+    return this.sanitize(updated);
   }
 
   async getTokenHistory(userId: string) {

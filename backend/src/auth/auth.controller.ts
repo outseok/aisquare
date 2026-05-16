@@ -1,10 +1,11 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Patch, Body, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyPhoneDto } from './dto/verify-phone.dto';
+import { UpdateBioDto } from './dto/update-bio.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -37,6 +38,14 @@ export class AuthController {
   @ApiOperation({ summary: '내 프로필 조회' })
   getProfile(@Request() req) {
     return this.authService.getProfile(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/bio')
+  @ApiOperation({ summary: '소개글 수정 (본인만)' })
+  updateBio(@Request() req, @Body() dto: UpdateBioDto) {
+    return this.authService.updateBio(req.user.id, dto);
   }
 
   @ApiBearerAuth()

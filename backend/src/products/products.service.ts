@@ -137,6 +137,11 @@ export class ProductsService {
     });
 
     return {
+      username: seller.username,
+      name: seller.name,
+      nickname: seller.nickname,
+      bio: seller.bio,
+      trustToken: seller.trustToken,
       totalSold: seller.products.length,
       avgRating:
         reviews.length > 0
