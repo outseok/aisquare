@@ -19,12 +19,13 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findFirst({
       where: {
-        OR: [{ username: dto.username }, { email: dto.email }, { phone: dto.phone }],
+        OR: [{ username: dto.username }, { email: dto.email }, { phone: dto.phone }, { nickname: dto.nickname }],
       },
     });
     if (existing?.username === dto.username) throw new ConflictException('이미 사용 중인 아이디입니다');
     if (existing?.email === dto.email) throw new ConflictException('이미 사용 중인 이메일입니다');
     if (existing?.phone === dto.phone) throw new ConflictException('이미 사용 중인 핸드폰 번호입니다');
+    if (existing?.nickname === dto.nickname) throw new ConflictException('이미 사용 중인 닉네임입니다');
 
     const adminUsernames = (process.env.ADMIN_USERNAMES || '')
       .split(',').map((u) => u.trim()).filter(Boolean);
@@ -36,6 +37,7 @@ export class AuthService {
         username: dto.username,
         passwordHash,
         name: dto.name,
+        nickname: dto.nickname,
         email: dto.email,
         phone: dto.phone,
         isAdmin,

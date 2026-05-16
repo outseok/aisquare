@@ -22,4 +22,8 @@ export class RegisterDto {
   @ApiProperty({ example: '01012345678' })
   @IsString()
   phone: string;
+
+  @ApiProperty({ example: '코딩왕' })
+  @IsString()
+  nickname: string;
 }

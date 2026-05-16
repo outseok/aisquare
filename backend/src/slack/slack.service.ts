@@ -10,7 +10,8 @@ export class SlackService {
     reportId: string;
     orderId: string;
     productTitle: string;
-    reporterName: string;
+    sellerInfo: string;
+    buyerInfo: string;
     reason: string;
   }) {
     await this.send({
@@ -22,7 +23,8 @@ export class SlackService {
             { title: '신고 ID', value: payload.reportId, short: true },
             { title: '주문 ID', value: payload.orderId, short: true },
             { title: '상품명', value: payload.productTitle, short: false },
-            { title: '신고자', value: payload.reporterName, short: false },
+            { title: '판매자', value: payload.sellerInfo, short: false },
+            { title: '구매자(신고자)', value: payload.buyerInfo, short: false },
             { title: '신고 사유', value: payload.reason, short: false },
           ],
           footer: `Recode AI | ${new Date().toISOString()}`,

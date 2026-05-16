@@ -22,7 +22,10 @@ export class ReportsService {
   ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { product: true },
+      include: {
+        product: { include: { seller: { select: { username: true, nickname: true, name: true } } } },
+        buyer: { select: { username: true, nickname: true, name: true } },
+      },
     });
     if (!order) throw new NotFoundException('주문을 찾을 수 없습니다');
     if (order.buyerId !== reporterId) throw new ForbiddenException('구매자만 신고할 수 있습니다');
@@ -47,12 +50,14 @@ export class ReportsService {
       }),
     ]);
 
-    const reporter = await this.prisma.user.findUnique({ where: { id: reporterId } });
+    const seller = order.product.seller;
+    const buyer = order.buyer;
     await this.slack.sendReportAlert({
       reportId: report.id,
       orderId,
       productTitle: order.product.title,
-      reporterName: reporter ? `${reporter.name} (${reporter.username})` : reporterId,
+      sellerInfo: `${seller.name} / ${seller.nickname} (${seller.username})`,
+      buyerInfo: `${buyer.name} / ${buyer.nickname} (${buyer.username})`,
       reason: dto.reason,
     });
 
