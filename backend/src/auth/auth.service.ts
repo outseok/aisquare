@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { TokenService } from '../token/token.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -12,6 +13,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private tokenService: TokenService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -74,6 +76,18 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException();
     return this.sanitize(user);
+  }
+
+  async getTokenHistory(userId: string) {
+    return this.tokenService.getHistory(userId);
+  }
+
+  async getPointHistory(userId: string) {
+    return this.prisma.pointLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
   }
 
   private sanitize(user: any) {

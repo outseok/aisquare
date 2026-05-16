@@ -37,4 +37,20 @@ export class AuthController {
   getProfile(@Request() req) {
     return this.authService.getProfile(req.user.id);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/tokens')
+  @ApiOperation({ summary: '신뢰 토큰 변동 내역' })
+  getTokenHistory(@Request() req) {
+    return this.authService.getTokenHistory(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/points')
+  @ApiOperation({ summary: '포인트 변동 내역' })
+  getPointHistory(@Request() req) {
+    return this.authService.getPointHistory(req.user.id);
+  }
 }
