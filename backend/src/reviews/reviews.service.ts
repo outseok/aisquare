@@ -38,6 +38,8 @@ export class ReviewsService {
 
     const sellerId = order.product.sellerId;
 
+    await this.grantReviewPoint(reviewerId);
+
     if (dto.rating === 5) {
       await this.grant5StarBonus(order.productId);
       await this.tokenService.grant(sellerId, 0.5, 'EARN_REVIEW_5', '5점 리뷰 수신');
@@ -75,6 +77,22 @@ export class ReviewsService {
       where: { productId },
       include: { reviewer: { select: { username: true, name: true } } },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  private async grantReviewPoint(userId: string) {
+    const latest = await this.prisma.pointLog.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    await this.prisma.pointLog.create({
+      data: {
+        userId,
+        type: 'EARN_BONUS',
+        amount: 100,
+        balance: (latest?.balance || 0) + 100,
+        memo: '리뷰 작성 보상',
+      },
     });
   }
 

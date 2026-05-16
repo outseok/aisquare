@@ -4,7 +4,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PrepareChargeDto } from './dto/prepare-charge.dto';
 import { ConfirmChargeDto } from './dto/confirm-charge.dto';
 
-const SQUARE_RATE = parseInt(process.env.SQUARE_RATE || '1000', 10); // 1,000원 = 1 Square
+// 충전 시: 1,100원 = 1,000 Square (10% 수수료 포함)
+const CHARGE_UNIT_KRW = 1100;
+const CHARGE_UNIT_SQ = 1000;
+const MIN_CHARGE_SQ = 5000;   // 최소 5,000 Square
+const MIN_CHARGE_KRW = 5500;  // 최소 5,500원
 
 @Injectable()
 export class WalletService {
@@ -13,13 +17,19 @@ export class WalletService {
   constructor(private prisma: PrismaService) {}
 
   async prepareCharge(userId: string, dto: PrepareChargeDto) {
-    const squareAmount = Math.floor(dto.amountKrw / SQUARE_RATE);
-    if (squareAmount < 1) {
-      throw new BadRequestException(`최소 1원부터 충전 가능합니다`);
+    const units = Math.floor(dto.amountKrw / CHARGE_UNIT_KRW);
+    const squareAmount = units * CHARGE_UNIT_SQ;
+    if (squareAmount < MIN_CHARGE_SQ) {
+      throw new BadRequestException(
+        `최소 ${MIN_CHARGE_KRW.toLocaleString()}원(${MIN_CHARGE_SQ.toLocaleString()} Square)부터 충전 가능합니다`,
+      );
     }
 
+    // 실제 청구 금액: 1,100원 단위로 절사
+    const chargeKrw = units * CHARGE_UNIT_KRW;
+
     const charge = await this.prisma.walletCharge.create({
-      data: { userId, amountKrw: dto.amountKrw, squareAmount, status: 'PENDING' },
+      data: { userId, amountKrw: chargeKrw, squareAmount, status: 'PENDING' },
     });
 
     return {
@@ -27,7 +37,7 @@ export class WalletService {
       tossOrderId: charge.id,
       amountKrw: charge.amountKrw,
       squareAmount: charge.squareAmount,
-      exchangeRate: SQUARE_RATE,
+      exchangeInfo: `${CHARGE_UNIT_KRW}원 = ${CHARGE_UNIT_SQ} Square`,
     };
   }
 
@@ -40,7 +50,6 @@ export class WalletService {
       throw new BadRequestException(`충전 금액 불일치: 요청금액 ${charge.amountKrw}원`);
     }
 
-    // Toss 결제 승인
     const secretKey = process.env.TOSS_SECRET_KEY;
     if (!secretKey) throw new BadRequestException('결제 서비스 설정이 필요합니다');
 
@@ -59,9 +68,11 @@ export class WalletService {
       throw new BadRequestException(err?.response?.data?.message || 'Toss 결제 승인 실패');
     }
 
-    // Square 지급 (BE2 연동)
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     await this.giveSquareTokens(user?.squareWalletAddr, charge.squareAmount, chargeId);
+
+    // 충전 적립금: 충전 금액의 0.1% Point 지급 (기획서 5절)
+    await this.grantChargeBonus(userId, charge.amountKrw);
 
     const updated = await this.prisma.walletCharge.update({
       where: { id: chargeId },
@@ -92,5 +103,24 @@ export class WalletService {
     } catch (err) {
       this.logger.error(`BE2 Square 지급 실패: ${err?.message}`);
     }
+  }
+
+  private async grantChargeBonus(userId: string, amountKrw: number) {
+    const bonus = Math.floor(amountKrw * 0.001);
+    if (bonus <= 0) return;
+
+    const latest = await this.prisma.pointLog.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    await this.prisma.pointLog.create({
+      data: {
+        userId,
+        type: 'EARN_BONUS',
+        amount: bonus,
+        balance: (latest?.balance || 0) + bonus,
+        memo: `충전 적립금: ${amountKrw.toLocaleString()}원 충전`,
+      },
+    });
   }
 }

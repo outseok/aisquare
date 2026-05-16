@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, BadRequestException, ForbiddenException,
+  Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger,
 } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +12,8 @@ import { TokenService } from '../token/token.service';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private prisma: PrismaService,
     private productsService: ProductsService,
@@ -27,16 +29,40 @@ export class OrdersService {
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
     if (product.sellerId === buyerId) throw new BadRequestException('본인 상품은 구매할 수 없습니다');
 
-    const paymentAmount = product.price;
+    const usedPoint = dto.usedPoint || 0;
+    if (usedPoint > 0) {
+      const balance = await this.getPointBalance(buyerId);
+      if (balance < usedPoint) throw new BadRequestException(`포인트 잔액 부족: 보유 ${balance}P`);
+      if (usedPoint > product.price) throw new BadRequestException('포인트는 상품 가격을 초과할 수 없습니다');
+    }
+
+    const paymentAmount = product.price - usedPoint;
     const autoConfirmAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
     const order = await this.prisma.$transaction(async (tx) => {
+      if (usedPoint > 0) {
+        const latest = await tx.pointLog.findFirst({
+          where: { userId: buyerId },
+          orderBy: { createdAt: 'desc' },
+        });
+        await tx.pointLog.create({
+          data: {
+            userId: buyerId,
+            type: 'USE_PURCHASE',
+            amount: -usedPoint,
+            balance: (latest?.balance || 0) - usedPoint,
+            memo: `포인트 사용: ${product.title}`,
+          },
+        });
+      }
+
       const newOrder = await tx.order.create({
         data: {
           buyerId,
           productId: dto.productId,
           paymentMethod: dto.paymentMethod,
           paymentAmount,
+          usedPoint: usedPoint || null,
           autoConfirmAt,
           status: 'PAYMENT_PENDING',
         },
@@ -81,10 +107,9 @@ export class OrdersService {
     const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'PENDING_CONFIRMATION', txHash: dto.paymentKey },
-      include: { product: { select: { sellerId: true, title: true, price: true } } },
+      include: { product: { select: { sellerId: true, title: true } } },
     });
 
-    await this.grantSaleBonus(updated.product.sellerId, updated.product.price, updated.product.title);
     await this.productsService.checkMilestoneBonuses(updated.product.sellerId);
 
     return updated;
@@ -103,10 +128,9 @@ export class OrdersService {
     const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'PENDING_CONFIRMATION', txHash: dto.txHash },
-      include: { product: { select: { sellerId: true, title: true, price: true } } },
+      include: { product: { select: { sellerId: true, title: true } } },
     });
 
-    await this.grantSaleBonus(updated.product.sellerId, updated.product.price, updated.product.title);
     await this.productsService.checkMilestoneBonuses(updated.product.sellerId);
 
     return updated;
@@ -122,12 +146,14 @@ export class OrdersService {
     const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED', settledAt: new Date() },
-      include: { product: { select: { sellerId: true, title: true } } },
+      include: { product: { select: { sellerId: true, title: true, price: true } } },
     });
 
     await this.tokenService.grant(
       updated.product.sellerId, 1, 'EARN_CONFIRM', `구매 확정: ${updated.product.title}`,
     );
+    await this.grantConfirmCashback(updated.buyerId, updated.product.sellerId, updated.product.price, updated.product.title);
+    await this.releaseEscrow(orderId, updated.product.sellerId, updated.product.price);
 
     return updated;
   }
@@ -136,12 +162,14 @@ export class OrdersService {
     const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED', settledAt: new Date() },
-      include: { product: { select: { sellerId: true, title: true } } },
+      include: { product: { select: { sellerId: true, title: true, price: true } } },
     });
 
     await this.tokenService.grant(
       updated.product.sellerId, 1, 'EARN_CONFIRM', `자동 구매 확정: ${updated.product.title}`,
     );
+    await this.grantConfirmCashback(updated.buyerId, updated.product.sellerId, updated.product.price, updated.product.title);
+    await this.releaseEscrow(orderId, updated.product.sellerId, updated.product.price);
 
     return updated;
   }
@@ -215,24 +243,52 @@ export class OrdersService {
     return latest?.balance || 0;
   }
 
-  private async grantSaleBonus(sellerId: string, priceKrw: number, productTitle: string) {
-    let rate: number;
-    if (priceKrw < 5_000) rate = 0.05;
-    else if (priceKrw < 20_000) rate = 0.07;
-    else if (priceKrw < 50_000) rate = 0.10;
-    else rate = 0.12;
+  // 구매 확정 시 구매자·판매자 각 2% Point 캐시백 (기획서 4.4절)
+  private async grantConfirmCashback(buyerId: string, sellerId: string, price: number, productTitle: string) {
+    const cashback = Math.floor(price * 0.02);
+    if (cashback <= 0) return;
 
-    const bonusRp = Math.floor(priceKrw * rate);
+    const [buyerBalance, sellerBalance] = await Promise.all([
+      this.getPointBalance(buyerId),
+      this.getPointBalance(sellerId),
+    ]);
 
-    const balance = await this.getPointBalance(sellerId);
+    await this.prisma.pointLog.create({
+      data: {
+        userId: buyerId,
+        type: 'EARN_BONUS',
+        amount: cashback,
+        balance: buyerBalance + cashback,
+        memo: `구매 확정 캐시백: ${productTitle}`,
+      },
+    });
     await this.prisma.pointLog.create({
       data: {
         userId: sellerId,
-        type: 'EARN_SALE',
-        amount: bonusRp,
-        balance: balance + bonusRp,
-        memo: `판매 보상: ${productTitle}`,
+        type: 'EARN_BONUS',
+        amount: cashback,
+        balance: sellerBalance + cashback,
+        memo: `판매 확정 캐시백: ${productTitle}`,
       },
     });
+  }
+
+  // BE2 에스크로 해제 stub — BE2 API 완성 시 실구현으로 교체
+  private async releaseEscrow(orderId: string, sellerId: string, price: number) {
+    const be2Url = process.env.BE2_API_URL;
+    if (!be2Url) {
+      this.logger.warn(`BE2 에스크로 해제 스킵 (orderId=${orderId}, settlement=${Math.floor(price * 0.9)}원)`);
+      return;
+    }
+    try {
+      await axios.post(`${be2Url}/escrow/release`, {
+        orderId,
+        sellerId,
+        settlementAmount: Math.floor(price * 0.9),
+      });
+      this.logger.log(`BE2 에스크로 해제 완료: ${orderId}`);
+    } catch (err) {
+      this.logger.error(`BE2 에스크로 해제 실패: ${err?.message}`);
+    }
   }
 }
