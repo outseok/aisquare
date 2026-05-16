@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenLogType } from '@prisma/client';
 
-const MAX_TOKEN = 200;
+const MAX_TOKEN = 100;
 const MIN_TOKEN = 0;
 
 @Injectable()

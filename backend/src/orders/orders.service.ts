@@ -80,7 +80,7 @@ export class OrdersService {
     });
 
     await this.tokenService.grant(
-      updated.product.sellerId, 2, 'EARN_CONFIRM', `구매 확정: ${updated.product.title}`,
+      updated.product.sellerId, 1, 'EARN_CONFIRM', `구매 확정: ${updated.product.title}`,
     );
 
     return updated;
@@ -94,7 +94,7 @@ export class OrdersService {
     });
 
     await this.tokenService.grant(
-      updated.product.sellerId, 2, 'EARN_CONFIRM', `자동 구매 확정: ${updated.product.title}`,
+      updated.product.sellerId, 1, 'EARN_CONFIRM', `자동 구매 확정: ${updated.product.title}`,
     );
 
     return updated;

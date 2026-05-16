@@ -40,9 +40,9 @@ export class ReviewsService {
 
     if (dto.rating === 5) {
       await this.grant5StarBonus(order.productId);
-      await this.tokenService.grant(sellerId, 1, 'EARN_REVIEW_5', '5점 리뷰 수신');
+      await this.tokenService.grant(sellerId, 0.5, 'EARN_REVIEW_5', '5점 리뷰 수신');
     } else if (dto.rating <= 2) {
-      await this.tokenService.deduct(sellerId, 1, 'DEDUCT_REVIEW_LOW', `${dto.rating}점 리뷰 수신`);
+      await this.tokenService.deduct(sellerId, 0.5, 'DEDUCT_REVIEW_LOW', `${dto.rating}점 리뷰 수신`);
     }
 
     return review;

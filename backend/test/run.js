@@ -316,9 +316,9 @@ async function testCart() {
 async function testOrdersAndTokens() {
   section('ORDERS & 신뢰 토큰');
 
-  // 초기 토큰 확인 (30)
+  // 초기 토큰 확인 (15)
   let seller = await prisma.user.findUnique({ where: { id: sellerId } });
-  check(`판매자 초기 신뢰 토큰 (30)`, seller.trustToken === 30, seller.trustToken);
+  check(`판매자 초기 신뢰 토큰 (15)`, seller.trustToken === 15, seller.trustToken);
 
   // 내 구매/판매 목록
   let r = await api('GET', '/orders/my/purchases', null, buyerToken);
@@ -332,7 +332,7 @@ async function testOrdersAndTokens() {
   check('주문1 확정', r.data.status === 'CONFIRMED', r.data.message);
 
   seller = await prisma.user.findUnique({ where: { id: sellerId } });
-  check('구매 확정 → 신뢰 토큰 +2 (32)', seller.trustToken === 32, seller.trustToken);
+  check('구매 확정 → 신뢰 토큰 +1 (16)', seller.trustToken === 16, seller.trustToken);
 
   // 이미 확정된 주문 재확정 불가
   r = await api('PATCH', `/orders/${order1Id}/confirm`, null, buyerToken);
@@ -342,7 +342,7 @@ async function testOrdersAndTokens() {
   r = await api('PATCH', `/orders/${order2Id}/confirm`, null, buyerToken);
   check('주문2 확정', r.data.status === 'CONFIRMED');
   seller = await prisma.user.findUnique({ where: { id: sellerId } });
-  check('주문2 확정 → 신뢰 토큰 +2 (34)', seller.trustToken === 34, seller.trustToken);
+  check('주문2 확정 → 신뢰 토큰 +1 (17)', seller.trustToken === 17, seller.trustToken);
 }
 
 // ── 7. 리뷰 + 신뢰 토큰 ──────────────────────────────
@@ -355,14 +355,14 @@ async function testReviews() {
   review1Id = r.data.id;
 
   let seller = await prisma.user.findUnique({ where: { id: sellerId } });
-  check('5점 리뷰 → 신뢰 토큰 +1 (35)', seller.trustToken === 35, seller.trustToken);
+  check('5점 리뷰 → 신뢰 토큰 +0.5 (17.5)', seller.trustToken === 17.5, seller.trustToken);
 
-  // 2점 리뷰 (주문2) → 판매자 -1
+  // 2점 리뷰 (주문2) → 판매자 -0.5
   r = await api('POST', `/reviews/order/${order2Id}`, { rating: 2, content: '별로였어요' }, buyerToken);
   check('2점 리뷰 작성', r.data.id, r.data.message);
 
   seller = await prisma.user.findUnique({ where: { id: sellerId } });
-  check('2점 리뷰 → 신뢰 토큰 -1 (34)', seller.trustToken === 34, seller.trustToken);
+  check('2점 리뷰 → 신뢰 토큰 -0.5 (17)', seller.trustToken === 17, seller.trustToken);
 
   // 리뷰 목록
   r = await api('GET', `/reviews/product/${product1Id}`);

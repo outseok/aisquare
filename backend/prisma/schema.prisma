@@ -19,7 +19,7 @@ model User {
   emailVerified Boolean    @default(false)
   isAdmin       Boolean    @default(false)
   status        UserStatus @default(ACTIVE)
-  trustToken    Int        @default(30)
+  trustToken    Float      @default(15)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -41,8 +41,8 @@ model TokenLog {
   userId  String
   user    User         @relation(fields: [userId], references: [id])
   type    TokenLogType
-  amount  Int
-  balance Int
+  amount  Float
+  balance Float
   memo    String?
 
   createdAt DateTime @default(now())
