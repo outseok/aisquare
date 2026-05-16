@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyPhoneDto } from './dto/verify-phone.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -25,9 +26,9 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('verify-phone')
-  @ApiOperation({ summary: '핸드폰 인증 완료 처리' })
-  verifyPhone(@Request() req) {
-    return this.authService.verifyPhone(req.user.id);
+  @ApiOperation({ summary: 'PASS 본인인증 (포트원 imp_uid 검증)' })
+  verifyPhone(@Request() req, @Body() dto: VerifyPhoneDto) {
+    return this.authService.verifyPhone(req.user.id, dto);
   }
 
   @ApiBearerAuth()

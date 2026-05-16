@@ -1,12 +1,14 @@
 import {
-  Injectable, UnauthorizedException, ConflictException,
+  Injectable, UnauthorizedException, ConflictException, BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokenService } from '../token/token.service';
 import * as bcrypt from 'bcrypt';
+import axios from 'axios';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyPhoneDto } from './dto/verify-phone.dto';
 
 @Injectable()
 export class AuthService {
@@ -61,17 +63,60 @@ export class AuthService {
     return { accessToken: token, user: this.sanitize(user) };
   }
 
-  async verifyPhone(userId: string) {
-    const user = await this.prisma.user.update({
+  async verifyPhone(userId: string, dto: VerifyPhoneDto) {
+    const impKey = process.env.IMP_KEY;
+    const impSecret = process.env.IMP_SECRET;
+    if (!impKey || !impSecret) throw new BadRequestException('본인인증 서비스 설정이 필요합니다');
+
+    // 포트원 액세스 토큰 발급
+    let accessToken: string;
+    try {
+      const tokenRes = await axios.post('https://api.iamport.kr/users/getToken', {
+        imp_key: impKey,
+        imp_secret: impSecret,
+      });
+      accessToken = tokenRes.data.response.access_token;
+    } catch {
+      throw new BadRequestException('포트원 인증 토큰 발급 실패');
+    }
+
+    // 인증 결과 조회
+    let cert: { certified: boolean; phone: string; name: string };
+    try {
+      const certRes = await axios.get(
+        `https://api.iamport.kr/certifications/${dto.impUid}`,
+        { headers: { Authorization: accessToken } },
+      );
+      cert = certRes.data.response;
+    } catch {
+      throw new BadRequestException('인증 정보를 조회할 수 없습니다');
+    }
+
+    if (!cert.certified) throw new BadRequestException('본인인증에 실패했습니다');
+
+    // 가입 전화번호와 비교 (하이픈 제거 후)
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+
+    const certPhone = cert.phone.replace(/-/g, '');
+    const userPhone = user.phone.replace(/-/g, '');
+    if (certPhone !== userPhone) {
+      await this.prisma.verificationLog.create({
+        data: { userId, type: 'PHONE', status: 'FAILED', meta: { impUid: dto.impUid, certPhone } },
+      });
+      throw new BadRequestException('가입한 전화번호와 인증 번호가 일치하지 않습니다');
+    }
+
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { phoneVerified: true },
     });
 
     await this.prisma.verificationLog.create({
-      data: { userId, type: 'PHONE', status: 'SUCCESS' },
+      data: { userId, type: 'PHONE', status: 'SUCCESS', meta: { impUid: dto.impUid } },
     });
 
-    return this.sanitize(user);
+    return this.sanitize(updated);
   }
 
   async getProfile(userId: string) {
