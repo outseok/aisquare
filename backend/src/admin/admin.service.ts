@@ -119,32 +119,32 @@ export class AdminService {
         this.prisma.order.count(),
         this.prisma.order.aggregate({
           where: { status: 'PENDING_CONFIRMATION' },
-          _sum: { amountEth: true },
+          _sum: { paymentAmount: true },
           _count: true,
         }),
         this.prisma.order.aggregate({
           where: { status: 'SETTLEMENT_HOLD' },
-          _sum: { amountEth: true },
+          _sum: { paymentAmount: true },
           _count: true,
         }),
         this.prisma.order.aggregate({
           where: { status: 'CONFIRMED' },
-          _sum: { amountEth: true },
+          _sum: { paymentAmount: true },
           _count: true,
         }),
         this.prisma.order.aggregate({
           where: { status: 'REFUNDED' },
-          _sum: { amountEth: true },
+          _sum: { paymentAmount: true },
           _count: true,
         }),
       ]);
 
     return {
       totalOrders,
-      pending: { count: pendingOrders._count, totalEth: pendingOrders._sum.amountEth?.toString() || '0' },
-      hold: { count: holdOrders._count, totalEth: holdOrders._sum.amountEth?.toString() || '0' },
-      confirmed: { count: confirmedOrders._count, totalEth: confirmedOrders._sum.amountEth?.toString() || '0' },
-      refunded: { count: refundedOrders._count, totalEth: refundedOrders._sum.amountEth?.toString() || '0' },
+      pending: { count: pendingOrders._count, totalKrw:pendingOrders._sum.paymentAmount?.toString() || '0' },
+      hold: { count: holdOrders._count, totalKrw:holdOrders._sum.paymentAmount?.toString() || '0' },
+      confirmed: { count: confirmedOrders._count, totalKrw:confirmedOrders._sum.paymentAmount?.toString() || '0' },
+      refunded: { count: refundedOrders._count, totalKrw:refundedOrders._sum.paymentAmount?.toString() || '0' },
     };
   }
 

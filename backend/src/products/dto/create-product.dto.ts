@@ -11,11 +11,11 @@ export class CreateProductDto {
   @IsString()
   description: string;
 
-  @ApiProperty({ example: 0.01, description: 'ETH 단위 가격' })
-  @Transform(({ value }) => parseFloat(value))
+  @ApiProperty({ example: 5000, description: 'KRW 단위 가격 (원)' })
+  @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
   @Min(0)
-  priceEth: number;
+  price: number;
 
   @ApiPropertyOptional({ type: [String], example: ['GPT', 'AI', '프롬프트'] })
   @IsOptional()

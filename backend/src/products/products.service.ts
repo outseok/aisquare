@@ -21,7 +21,7 @@ export class ProductsService {
         sellerId,
         title: dto.title,
         description: dto.description,
-        priceEth: new Prisma.Decimal(dto.priceEth),
+        price: dto.price,
         tags: dto.tags || [],
         fileKey,
         fileType,
@@ -157,7 +157,7 @@ export class ProductsService {
       data: {
         ...(dto.title && { title: dto.title }),
         ...(dto.description && { description: dto.description }),
-        ...(dto.priceEth !== undefined && { priceEth: new Prisma.Decimal(dto.priceEth) }),
+        ...(dto.price !== undefined && { price: dto.price }),
         ...(dto.tags && { tags: dto.tags }),
       },
     });

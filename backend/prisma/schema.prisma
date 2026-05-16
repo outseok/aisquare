@@ -8,20 +8,23 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  username      String     @unique
-  passwordHash  String
-  name          String
-  nickname      String     @unique
-  email         String     @unique
-  phone         String     @unique
-  phoneVerified Boolean    @default(false)
-  emailVerified Boolean    @default(false)
-  isAdmin       Boolean    @default(false)
-  status        UserStatus @default(ACTIVE)
-  trustToken    Float      @default(15)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id               String     @id @default(cuid())
+  username         String     @unique
+  passwordHash     String
+  name             String
+  nickname         String     @unique
+  email            String     @unique
+  phone            String     @unique
+  phoneVerified    Boolean    @default(false)
+  emailVerified    Boolean    @default(false)
+  isAdmin          Boolean    @default(false)
+  status           UserStatus @default(ACTIVE)
+  trustToken       Float      @default(15)
+  passId           String?
+  squareWalletAddr String?
+  pointWalletAddr  String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   products          Product[]
   orders            Order[]
@@ -59,7 +62,7 @@ model Product {
   imageKey    String?
   fileKey     String
   fileType    FileType
-  priceEth    Decimal       @db.Decimal(30, 18)
+  price       Int
   isVisible   Boolean       @default(true)
   status      ProductStatus @default(ON_SALE)
   tags        Json
@@ -83,8 +86,9 @@ model Order {
   productId     String      @unique
   product       Product     @relation(fields: [productId], references: [id])
   paymentMethod PayMethod
-  amountEth     Decimal     @db.Decimal(30, 18)
-  amountRp      Int?
+  paymentAmount Int
+  usedPoint     Int?
+  txHash        String?
   status        OrderStatus @default(PENDING_CONFIRMATION)
   autoConfirmAt DateTime
   settledAt     DateTime?
@@ -214,8 +218,8 @@ enum ProductStatus {
 }
 
 enum PayMethod {
-  ETH
-  RP
+  TOSS
+  SQUARE
 }
 
 enum OrderStatus {

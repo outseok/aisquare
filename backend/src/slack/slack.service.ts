@@ -37,7 +37,7 @@ export class SlackService {
     orderId: string;
     productTitle: string;
     sellerName: string;
-    amountEth: string;
+    paymentAmount: number;
   }) {
     await this.send({
       text: '✅ 자동 구매 확정 처리되었습니다',
@@ -48,7 +48,7 @@ export class SlackService {
             { title: '주문 ID', value: payload.orderId, short: true },
             { title: '상품명', value: payload.productTitle, short: true },
             { title: '판매자', value: payload.sellerName, short: false },
-            { title: '정산 금액', value: `${payload.amountEth} ETH`, short: true },
+            { title: '결제 금액', value: `${payload.paymentAmount.toLocaleString()}원`, short: true },
           ],
           footer: `Recode AI | ${new Date().toISOString()}`,
         },

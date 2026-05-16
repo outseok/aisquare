@@ -30,7 +30,7 @@ export class SchedulerService {
           orderId: order.id,
           productTitle: order.product.title,
           sellerName: order.product.seller.name,
-          amountEth: order.amountEth.toString(),
+          paymentAmount: order.paymentAmount,
         });
 
         this.logger.log(`자동 확정 완료: 주문 ${order.id}`);

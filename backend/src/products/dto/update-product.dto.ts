@@ -13,12 +13,12 @@ export class UpdateProductDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: 0.005, description: 'ETH 단위 가격' })
+  @ApiPropertyOptional({ example: 3000, description: 'KRW 단위 가격 (원)' })
   @IsOptional()
-  @Transform(({ value }) => value !== undefined ? parseFloat(value) : undefined)
+  @Transform(({ value }) => value !== undefined ? parseInt(value, 10) : undefined)
   @IsNumber()
   @Min(0)
-  priceEth?: number;
+  price?: number;
 
   @ApiPropertyOptional({ type: [String], example: ['GPT', 'AI'] })
   @IsOptional()

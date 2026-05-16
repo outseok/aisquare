@@ -38,7 +38,7 @@ export class CartService {
           select: {
             id: true,
             title: true,
-            priceEth: true,
+            price: true,
             imageKey: true,
             fileType: true,
             status: true,

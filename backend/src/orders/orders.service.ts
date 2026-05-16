@@ -7,8 +7,6 @@ import { ProductsService } from '../products/products.service';
 import { FilesService } from '../files/files.service';
 import { TokenService } from '../token/token.service';
 
-const RP_PER_ETH = 10_000_000;
-
 @Injectable()
 export class OrdersService {
   constructor(
@@ -26,17 +24,7 @@ export class OrdersService {
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
     if (product.sellerId === buyerId) throw new BadRequestException('본인 상품은 구매할 수 없습니다');
 
-    const amountEth = product.priceEth;
-    let amountRp: number | undefined;
-
-    if (dto.paymentMethod === 'RP') {
-      const rpNeeded = Math.ceil(Number(amountEth) * RP_PER_ETH);
-      const balance = await this.getPointBalance(buyerId);
-      if (balance < rpNeeded) throw new BadRequestException('포인트 잔액이 부족합니다');
-      amountRp = rpNeeded;
-      await this.deductPoints(buyerId, rpNeeded, `상품 구매: ${product.title}`);
-    }
-
+    const paymentAmount = product.price;
     const autoConfirmAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
     const order = await this.prisma.$transaction(async (tx) => {
@@ -45,8 +33,7 @@ export class OrdersService {
           buyerId,
           productId: dto.productId,
           paymentMethod: dto.paymentMethod,
-          amountEth,
-          amountRp,
+          paymentAmount,
           autoConfirmAt,
           status: 'PENDING_CONFIRMATION',
         },
@@ -60,7 +47,7 @@ export class OrdersService {
       return newOrder;
     });
 
-    await this.grantSaleBonus(product.sellerId, Number(amountEth), product.title);
+    await this.grantSaleBonus(product.sellerId, product.price, product.title);
     await this.productsService.checkMilestoneBonuses(product.sellerId);
 
     return order;
@@ -119,7 +106,7 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where: { buyerId },
       include: {
-        product: { select: { title: true, fileType: true, imageKey: true, priceEth: true } },
+        product: { select: { title: true, fileType: true, imageKey: true, price: true } },
         review: { select: { id: true } },
         reports: { select: { id: true, status: true } },
       },
@@ -131,7 +118,7 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where: { product: { sellerId } },
       include: {
-        product: { select: { title: true, priceEth: true } },
+        product: { select: { title: true, price: true } },
         buyer: { select: { username: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -176,15 +163,14 @@ export class OrdersService {
     });
   }
 
-  private async grantSaleBonus(sellerId: string, priceEth: number, productTitle: string) {
+  private async grantSaleBonus(sellerId: string, priceKrw: number, productTitle: string) {
     let rate: number;
-    if (priceEth < 0.001) rate = 0.05;
-    else if (priceEth < 0.005) rate = 0.07;
-    else if (priceEth < 0.01) rate = 0.10;
+    if (priceKrw < 5_000) rate = 0.05;
+    else if (priceKrw < 20_000) rate = 0.07;
+    else if (priceKrw < 50_000) rate = 0.10;
     else rate = 0.12;
 
-    const bonusEth = priceEth * rate;
-    const bonusRp = Math.floor(bonusEth * RP_PER_ETH);
+    const bonusRp = Math.floor(priceKrw * rate);
 
     const balance = await this.getPointBalance(sellerId);
     await this.prisma.pointLog.create({
