@@ -68,19 +68,22 @@ type WalletTx struct {
 }
 
 // EscrowState — Admin Wallet 에스크로 상태
+// 수수료 구조: 총 10% = 서버 6% + 판매자 보너스 2% + 구매자 캐시백 2%
 type EscrowState struct {
-	OrderID       string    `json:"orderId"`
-	BuyerID       string    `json:"buyerId"`
-	SellerID      string    `json:"sellerId"`
-	Amount        int64     `json:"amount"`      // 총 결제액 (KRW)
-	PlatformFee   int64     `json:"platformFee"` // 수수료 10%
-	SellerNet     int64     `json:"sellerNet"`   // 판매자 정산액 90%
-	PayMethod     string    `json:"payMethod"`   // SQUARE | TOSS
-	UsedPoint     int64     `json:"usedPoint"`   // Point Wallet 할인 적용액
-	Status        string    `json:"status"`      // LOCKED | SETTLED | REFUNDED
-	AutoConfirmAt time.Time `json:"autoConfirmAt"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	OrderID        string    `json:"orderId"`
+	BuyerID        string    `json:"buyerId"`
+	SellerID       string    `json:"sellerId"`
+	Amount         int64     `json:"amount"`         // 총 결제액 (KRW)
+	PlatformFee    int64     `json:"platformFee"`    // 서버 수수료 6%
+	SellerBonus    int64     `json:"sellerBonus"`    // 판매자 수수료 환급 2%
+	BuyerCashback  int64     `json:"buyerCashback"`  // 구매자 캐시백 2%
+	SellerNet      int64     `json:"sellerNet"`      // 판매자 수익금 90%
+	PayMethod      string    `json:"payMethod"`      // SQUARE | TOSS
+	UsedPoint      int64     `json:"usedPoint"`      // Point Wallet 할인 적용액
+	Status         string    `json:"status"`         // LOCKED | SETTLED | REFUNDED
+	AutoConfirmAt  time.Time `json:"autoConfirmAt"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
 // TradeRecord — 불변 거래 원장
@@ -104,7 +107,11 @@ const (
 	escrowPrefix    = "ESC_"
 	tradePrefix     = "TRADE_"
 
-	commissionRate = 10 // 플랫폼 수수료 10%
+	// 수수료 구조 (총 10%)
+	platformFeeRate   = 6  // 서버 귀속 6%
+	sellerBonusRate   = 2  // 판매자 수수료 환급 2%
+	buyerCashbackRate = 2  // 구매자 캐시백 2%
+	// sellerNet = 100 - 6 - 2 - 2 = 90%
 )
 
 // ── Square Wallet ──────────────────────────────────────────────────────────────
@@ -287,8 +294,10 @@ func (c *WalletContract) LockEscrow(ctx contractapi.TransactionContextInterface,
 		return "", fmt.Errorf("에스크로가 이미 존재합니다: %s", orderID)
 	}
 
-	platformFee := amount * commissionRate / 100
-	sellerNet := amount - platformFee
+	platformFee   := amount * platformFeeRate / 100   // 서버 6%
+	sellerBonus   := amount * sellerBonusRate / 100   // 판매자 2%
+	buyerCashback := amount * buyerCashbackRate / 100 // 구매자 2%
+	sellerNet     := amount - platformFee - sellerBonus - buyerCashback // 90%
 
 	now := time.Now().UTC()
 	state := &EscrowState{
@@ -297,6 +306,8 @@ func (c *WalletContract) LockEscrow(ctx contractapi.TransactionContextInterface,
 		SellerID:      sellerID,
 		Amount:        amount,
 		PlatformFee:   platformFee,
+		SellerBonus:   sellerBonus,
+		BuyerCashback: buyerCashback,
 		SellerNet:     sellerNet,
 		PayMethod:     payMethod,
 		UsedPoint:     usedPoint,
@@ -359,17 +370,32 @@ func (c *WalletContract) SettleEscrow(ctx contractapi.TransactionContextInterfac
 		return "", fmt.Errorf("락업 상태가 아닙니다: %s (현재: %s)", orderID, state.Status)
 	}
 
-	// 판매자 Square Wallet에 90% 정산
+	// 판매자 Square Wallet: 수익금 90% + 수수료 환급 2% = 92%
+	sellerTotal := state.SellerNet + state.SellerBonus
 	sellerBalance, err := c.getWalletBalance(ctx, squareBalPrefix, state.SellerID)
 	if err != nil {
 		return "", err
 	}
-	newSellerBalance := sellerBalance + state.SellerNet
+	newSellerBalance := sellerBalance + sellerTotal
 	if err := c.saveWalletBalance(ctx, squareBalPrefix, state.SellerID, "SQUARE", newSellerBalance); err != nil {
 		return "", err
 	}
-	memo := fmt.Sprintf("판매 정산 (90%%): order=%s fee=%d", orderID, state.PlatformFee)
-	if err := c.appendWalletHistory(ctx, squareHisPrefix, state.SellerID, "SQUARE", "SETTLEMENT", state.SellerNet, newSellerBalance, memo, ctx.GetStub().GetTxID()); err != nil {
+	sellerMemo := fmt.Sprintf("판매 정산 수익금90%%+보너스2%%=%d: order=%s 서버수수료=%d", sellerTotal, orderID, state.PlatformFee)
+	if err := c.appendWalletHistory(ctx, squareHisPrefix, state.SellerID, "SQUARE", "SETTLEMENT", sellerTotal, newSellerBalance, sellerMemo, ctx.GetStub().GetTxID()); err != nil {
+		return "", err
+	}
+
+	// 구매자 Point Wallet: 캐시백 2%
+	buyerPointBalance, err := c.getWalletBalance(ctx, pointBalPrefix, state.BuyerID)
+	if err != nil {
+		return "", err
+	}
+	newBuyerPointBalance := buyerPointBalance + state.BuyerCashback
+	if err := c.saveWalletBalance(ctx, pointBalPrefix, state.BuyerID, "POINT", newBuyerPointBalance); err != nil {
+		return "", err
+	}
+	buyerMemo := fmt.Sprintf("구매 캐시백 2%%=%d: order=%s", state.BuyerCashback, orderID)
+	if err := c.appendWalletHistory(ctx, pointHisPrefix, state.BuyerID, "POINT", "ISSUE", state.BuyerCashback, newBuyerPointBalance, buyerMemo, ctx.GetStub().GetTxID()); err != nil {
 		return "", err
 	}
 
@@ -385,15 +411,19 @@ func (c *WalletContract) SettleEscrow(ctx contractapi.TransactionContextInterfac
 	}
 
 	eventData, _ := json.Marshal(map[string]interface{}{
-		"orderId":      orderID,
-		"sellerId":     state.SellerID,
-		"sellerNet":    state.SellerNet,
-		"platformFee":  state.PlatformFee,
+		"orderId":       orderID,
+		"sellerId":      state.SellerID,
+		"buyerId":       state.BuyerID,
+		"sellerNet":     state.SellerNet,
+		"sellerBonus":   state.SellerBonus,
+		"sellerTotal":   sellerTotal,
+		"buyerCashback": state.BuyerCashback,
+		"platformFee":   state.PlatformFee,
 	})
 	_ = ctx.GetStub().SetEvent("EscrowSettled", eventData)
 
-	return fmt.Sprintf("에스크로 정산 완료: order=%s seller=%s net=%d fee=%d",
-		orderID, state.SellerID, state.SellerNet, state.PlatformFee), nil
+	return fmt.Sprintf("에스크로 정산 완료: order=%s seller=%s total=%d(net=%d+bonus=%d) buyer cashback=%d platform=%d",
+		orderID, state.SellerID, sellerTotal, state.SellerNet, state.SellerBonus, state.BuyerCashback, state.PlatformFee), nil
 }
 
 // RefundEscrow — 신고 인정 시 구매자에게 환불

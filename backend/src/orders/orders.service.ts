@@ -9,8 +9,13 @@ import { FilesService } from '../files/files.service';
 import { FabricService } from '../fabric/fabric.service';
 
 const RP_PER_ETH = 10_000_000;
-const COMMISSION_RATE = 0.10;      // 판매 수수료 10%
-const SELLER_BONUS_RATE = 0.05;    // 수수료 중 판매자에게 RP로 환원 5%
+// 수수료 구조 (총 10%)
+//   서버(플랫폼): 6%  ← Admin Wallet 귀속
+//   판매자 보너스: 2% ← 판매자 Square Wallet 환급
+//   구매자 캐시백: 2% ← 구매자 Point Wallet 적립
+const PLATFORM_FEE_RATE = 0.06;
+const SELLER_BONUS_RATE = 0.02;
+const BUYER_CASHBACK_RATE = 0.02;
 const TOKEN_PCT_MAX = 100;
 
 @Injectable()
@@ -130,58 +135,77 @@ export class OrdersService {
   }
 
   // ── 정산 로직 ──────────────────────────────────────────────────────────────
-  // 판매자에게 90% RP 지급 + 5% RP 보너스 + 토큰 퍼센테이지 +1%
+  // 수수료 구조: 서버 6% / 판매자 보너스 2% / 구매자 캐시백 2%
+  // 판매자 수령: 90%(수익금) + 2%(보너스) = 92% → Square Wallet
+  // 구매자 수령: 2%(캐시백) → Point Wallet
+  // 트리거: 구매확정(수동) 또는 72시간 경과(자동)
 
   async settleToSeller(orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { product: { select: { title: true, sellerId: true } } },
+      include: {
+        product: { select: { title: true, sellerId: true } },
+        buyer: { select: { id: true } },
+      },
     });
     if (!order) return;
 
     const priceRp = order.amountRp ?? Math.ceil(Number(order.amountEth) * RP_PER_ETH);
-    const platformFee = Math.floor(priceRp * COMMISSION_RATE);
-    const sellerNet = priceRp - platformFee;             // 90%
-    const sellerBonus = Math.floor(priceRp * SELLER_BONUS_RATE); // 5%
-    const sellerId = order.product.sellerId;
+    const platformFee  = Math.floor(priceRp * PLATFORM_FEE_RATE);   // 서버 6%
+    const sellerBonus  = Math.floor(priceRp * SELLER_BONUS_RATE);   // 판매자 2%
+    const buyerCashback = Math.floor(priceRp * BUYER_CASHBACK_RATE); // 구매자 2%
+    const sellerNet    = priceRp - platformFee - sellerBonus - buyerCashback; // 90%
+    const sellerId     = order.product.sellerId;
+    const buyerId      = order.buyerId;
 
     await this.prisma.$transaction(async (tx) => {
-      const balance = await this.getPointBalance(sellerId, tx);
+      const sellerBalance = await this.getPointBalance(sellerId, tx);
 
+      // 판매자: 수익금 90%
       await tx.pointLog.create({
         data: {
           userId: sellerId,
           type: 'EARN_SALE',
           amount: sellerNet,
-          balance: balance + sellerNet,
-          memo: `판매 정산 (90%): ${order.product.title}`,
+          balance: sellerBalance + sellerNet,
+          memo: `판매 수익금 (90%): ${order.product.title}`,
         },
       });
 
+      // 판매자: 수수료 환급 2%
       await tx.pointLog.create({
         data: {
           userId: sellerId,
           type: 'EARN_BONUS',
           amount: sellerBonus,
-          balance: balance + sellerNet + sellerBonus,
-          memo: `판매 수수료 환원 보상 (5%): ${order.product.title}`,
+          balance: sellerBalance + sellerNet + sellerBonus,
+          memo: `판매자 수수료 환급 (2%): ${order.product.title}`,
+        },
+      });
+
+      // 구매자: 캐시백 2% → Point Wallet
+      const buyerBalance = await this.getPointBalance(buyerId, tx);
+      await tx.pointLog.create({
+        data: {
+          userId: buyerId,
+          type: 'EARN_BONUS',
+          amount: buyerCashback,
+          balance: buyerBalance + buyerCashback,
+          memo: `구매 캐시백 (2%): ${order.product.title}`,
         },
       });
 
       // 토큰 퍼센테이지 +1% (최대 100%)
       const seller = await tx.user.findUnique({ where: { id: sellerId }, select: { tokenPercentage: true } });
       const newPct = Math.min((seller?.tokenPercentage ?? 10) + 1, TOKEN_PCT_MAX);
-      await tx.user.update({
-        where: { id: sellerId },
-        data: { tokenPercentage: newPct },
-      });
+      await tx.user.update({ where: { id: sellerId }, data: { tokenPercentage: newPct } });
     });
 
-    // Fabric 에스크로 정산 (wallet 체인코드: Admin Wallet → 판매자 Square Wallet)
+    // Fabric: Admin Wallet → 판매자 Square Wallet 정산 (체인코드: sellerNet + sellerBonus)
     await this.fabric.settleEscrow(orderId).catch(() => {});
-    // 판매자 Square Wallet에 판매 수익 적립 기록
+    // Fabric: 구매자 Point Wallet 캐시백 적립
     await this.fabric
-      .depositSquare(sellerId, sellerNet, `판매 정산 90%: ${order.product.title}`)
+      .issuePoint(buyerId, buyerCashback, `구매 캐시백 2%: ${order.product.title}`)
       .catch(() => {});
   }
 

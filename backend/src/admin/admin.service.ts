@@ -225,40 +225,60 @@ export class AdminService {
     return { items, total, page, totalPages: Math.ceil(total / limit) };
   }
 
-  // ── 내부 헬퍼: 판매자 정산 (tx 내부에서 호출) ─────────────────────────────
+  // ── 내부 헬퍼: 판매자 정산 (신고 기각 시 tx 내부에서 호출) ─────────────────
+  // 수수료 구조: 서버 6% / 판매자 보너스 2% / 구매자 캐시백 2%
 
   private async settleSellerInTx(tx: any, order: any) {
     const priceRp = order.amountRp ?? 0;
     if (priceRp === 0) return;
 
-    const platformFee = Math.floor(priceRp * 0.10);
-    const sellerNet = priceRp - platformFee;
-    const sellerBonus = Math.floor(priceRp * 0.05);
-    const sellerId = order.product.sellerId;
+    const platformFee   = Math.floor(priceRp * 0.06); // 서버 6%
+    const sellerBonus   = Math.floor(priceRp * 0.02); // 판매자 2%
+    const buyerCashback = Math.floor(priceRp * 0.02); // 구매자 2%
+    const sellerNet     = priceRp - platformFee - sellerBonus - buyerCashback; // 90%
+    const sellerId      = order.product.sellerId;
+    const buyerId       = order.buyerId;
 
-    const latest = await tx.pointLog.findFirst({
+    const sellerLatest = await tx.pointLog.findFirst({
       where: { userId: sellerId },
       orderBy: { createdAt: 'desc' },
     });
-    const balance = latest?.balance ?? 0;
+    const sellerBalance = sellerLatest?.balance ?? 0;
 
+    // 판매자: 수익금 90%
     await tx.pointLog.create({
       data: {
         userId: sellerId,
         type: 'EARN_SALE',
         amount: sellerNet,
-        balance: balance + sellerNet,
-        memo: `판매 정산 (신고 승인): ${order.product.title}`,
+        balance: sellerBalance + sellerNet,
+        memo: `판매 수익금 90% (신고 기각): ${order.product.title}`,
       },
     });
 
+    // 판매자: 수수료 환급 2%
     await tx.pointLog.create({
       data: {
         userId: sellerId,
         type: 'EARN_BONUS',
         amount: sellerBonus,
-        balance: balance + sellerNet + sellerBonus,
-        memo: `판매 수수료 환원 보상 (신고 승인): ${order.product.title}`,
+        balance: sellerBalance + sellerNet + sellerBonus,
+        memo: `판매자 수수료 환급 2% (신고 기각): ${order.product.title}`,
+      },
+    });
+
+    // 구매자: 캐시백 2% → Point Wallet
+    const buyerLatest = await tx.pointLog.findFirst({
+      where: { userId: buyerId },
+      orderBy: { createdAt: 'desc' },
+    });
+    await tx.pointLog.create({
+      data: {
+        userId: buyerId,
+        type: 'EARN_BONUS',
+        amount: buyerCashback,
+        balance: (buyerLatest?.balance ?? 0) + buyerCashback,
+        memo: `구매 캐시백 2% (신고 기각): ${order.product.title}`,
       },
     });
 
@@ -267,9 +287,6 @@ export class AdminService {
       select: { tokenPercentage: true },
     });
     const newPct = Math.min((seller?.tokenPercentage ?? 10) + 1, 100);
-    await tx.user.update({
-      where: { id: sellerId },
-      data: { tokenPercentage: newPct },
-    });
+    await tx.user.update({ where: { id: sellerId }, data: { tokenPercentage: newPct } });
   }
 }
