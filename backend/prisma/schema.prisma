@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  walletAddress String    @unique
-  passVerified  Boolean   @default(false)
-  phoneHash     String?   @unique
-  isAdmin       Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  walletAddress    String    @unique
+  passVerified     Boolean   @default(false)
+  phoneHash        String?   @unique
+  isAdmin          Boolean   @default(false)
+  tokenPercentage  Int       @default(10)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   products          Product[]
   orders            Order[]
@@ -22,6 +23,7 @@ model User {
   reports           Report[]
   pointLogs         PointLog[]
   verificationLogs  VerificationLog[]
+  tossPayments      TossPayment[]
 
   @@map("users")
 }
@@ -36,6 +38,7 @@ model Product {
   fileKey     String
   fileType    FileType
   priceEth    Decimal       @db.Decimal(30, 18)
+  priceRp     Int?
   mintingTime MintingTime
   isVisible   Boolean       @default(true)
   status      ProductStatus @default(ON_SALE)
@@ -132,6 +135,24 @@ model AdminLog {
   @@map("admin_logs")
 }
 
+model TossPayment {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  tossOrderId   String          @unique
+  paymentKey    String?
+  amount        Int
+  purpose       TossPayPurpose
+  status        TossPayStatus   @default(PENDING)
+  rpGranted     Int?
+  relatedId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("toss_payments")
+}
+
 model VerificationLog {
   id            String           @id @default(cuid())
   userId        String
@@ -169,6 +190,8 @@ enum MintingTime {
 enum PayMethod {
   ETH
   RP
+  TOSS
+  SQUARE
 }
 
 enum OrderStatus {
@@ -192,7 +215,23 @@ enum PointLogType {
   EARN_BONUS
   USE_PURCHASE
   CHARGE
+  CHARGE_BONUS
+  REVIEW_BONUS
+  WITHDRAW
   CONVERT
+}
+
+enum TossPayPurpose {
+  RP_CHARGE
+  SQUARE_CHARGE
+  PRODUCT_PURCHASE
+}
+
+enum TossPayStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
 }
 
 enum VerificationType {

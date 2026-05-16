@@ -11,6 +11,10 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { FabricModule } from './fabric/fabric.module';
+import { PaymentsModule } from './payments/payments.module';
+import { PointsModule } from './points/points.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -26,6 +30,10 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     ReportsModule,
     AdminModule,
     SchedulerModule,
+    FabricModule,
+    PaymentsModule,
+    PointsModule,
+    WalletModule,
   ],
 })
 export class AppModule {}

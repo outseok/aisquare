@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportStatus } from '@prisma/client';
+import { FabricService } from '../fabric/fabric.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fabric: FabricService,
+  ) {}
 
   // 신고 목록 (상태별 필터)
   async getReports(status?: ReportStatus) {
@@ -41,7 +45,11 @@ export class AdminService {
     return report;
   }
 
-  // 신고 처리: 환불 또는 정상 지급
+  /**
+   * 신고 처리
+   * - APPROVED: 판매자 정상 정산 (Order→CONFIRMED) + 토큰 유지
+   * - REFUNDED: 구매자 환불 (Order→REFUNDED) + 판매자 토큰 퍼센테이지 0% 초기화
+   */
   async processReport(
     reportId: string,
     action: 'REFUNDED' | 'APPROVED',
@@ -49,33 +57,80 @@ export class AdminService {
   ) {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
-      include: { order: true },
+      include: {
+        order: {
+          include: { product: { select: { sellerId: true, title: true } } },
+        },
+      },
     });
     if (!report) throw new NotFoundException();
 
+    const order = report.order;
     const newOrderStatus = action === 'REFUNDED' ? 'REFUNDED' : 'CONFIRMED';
 
-    await this.prisma.$transaction([
-      this.prisma.report.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.report.update({
         where: { id: reportId },
         data: { status: action },
-      }),
-      this.prisma.order.update({
-        where: { id: report.orderId },
+      });
+
+      await tx.order.update({
+        where: { id: order.id },
         data: {
           status: newOrderStatus,
           settledAt: action === 'APPROVED' ? new Date() : undefined,
         },
-      }),
-      this.prisma.adminLog.create({
+      });
+
+      await tx.adminLog.create({
         data: {
           adminId,
           action: `REPORT_${action}`,
           targetId: reportId,
-          meta: { orderId: report.orderId },
+          meta: { orderId: order.id },
         },
-      }),
-    ]);
+      });
+
+      if (action === 'REFUNDED') {
+        // 신고 확정 시: 판매자 토큰 퍼센테이지 0%로 초기화
+        await tx.user.update({
+          where: { id: order.product.sellerId },
+          data: { tokenPercentage: 0 },
+        });
+
+        // 구매자 RP 환불 (RP 결제인 경우)
+        if (order.amountRp) {
+          const latest = await tx.pointLog.findFirst({
+            where: { userId: order.buyerId },
+            orderBy: { createdAt: 'desc' },
+          });
+          await tx.pointLog.create({
+            data: {
+              userId: order.buyerId,
+              type: 'CONVERT',
+              amount: order.amountRp,
+              balance: (latest?.balance ?? 0) + order.amountRp,
+              memo: `신고 환불: ${order.product.title}`,
+            },
+          });
+        }
+      }
+
+      if (action === 'APPROVED') {
+        // 판매자 정산 (settleToSeller 로직과 동일)
+        await this.settleSellerInTx(tx, order);
+      }
+    });
+
+    // REFUNDED: Fabric 에스크로 환불 (Square 결제: 구매자 Square Wallet으로 반환, Toss: Toss API 별도 처리)
+    if (action === 'REFUNDED') {
+      await this.fabric.refundEscrow(order.id).catch(() => {});
+    }
+
+    // APPROVED: Fabric 에스크로 정산 (Admin Wallet → 판매자 Square Wallet)
+    if (action === 'APPROVED') {
+      await this.fabric.settleEscrow(order.id).catch(() => {});
+    }
 
     return { success: true, action };
   }
@@ -109,44 +164,32 @@ export class AdminService {
         this.prisma.order.count(),
         this.prisma.order.aggregate({
           where: { status: 'PENDING_CONFIRMATION' },
-          _sum: { amountEth: true },
+          _sum: { amountRp: true },
           _count: true,
         }),
         this.prisma.order.aggregate({
           where: { status: 'SETTLEMENT_HOLD' },
-          _sum: { amountEth: true },
+          _sum: { amountRp: true },
           _count: true,
         }),
         this.prisma.order.aggregate({
           where: { status: 'CONFIRMED' },
-          _sum: { amountEth: true },
+          _sum: { amountRp: true },
           _count: true,
         }),
         this.prisma.order.aggregate({
           where: { status: 'REFUNDED' },
-          _sum: { amountEth: true },
+          _sum: { amountRp: true },
           _count: true,
         }),
       ]);
 
     return {
       totalOrders,
-      pending: {
-        count: pendingOrders._count,
-        totalEth: pendingOrders._sum.amountEth?.toString() || '0',
-      },
-      hold: {
-        count: holdOrders._count,
-        totalEth: holdOrders._sum.amountEth?.toString() || '0',
-      },
-      confirmed: {
-        count: confirmedOrders._count,
-        totalEth: confirmedOrders._sum.amountEth?.toString() || '0',
-      },
-      refunded: {
-        count: refundedOrders._count,
-        totalEth: refundedOrders._sum.amountEth?.toString() || '0',
-      },
+      pending: { count: pendingOrders._count, totalRp: pendingOrders._sum.amountRp ?? 0 },
+      hold: { count: holdOrders._count, totalRp: holdOrders._sum.amountRp ?? 0 },
+      confirmed: { count: confirmedOrders._count, totalRp: confirmedOrders._sum.amountRp ?? 0 },
+      refunded: { count: refundedOrders._count, totalRp: refundedOrders._sum.amountRp ?? 0 },
     };
   }
 
@@ -158,7 +201,7 @@ export class AdminService {
         skip,
         take: limit,
         include: {
-          seller: { select: { walletAddress: true } },
+          seller: { select: { walletAddress: true, tokenPercentage: true } },
           _count: { select: { reviews: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -180,5 +223,53 @@ export class AdminService {
       this.prisma.adminLog.count(),
     ]);
     return { items, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  // ── 내부 헬퍼: 판매자 정산 (tx 내부에서 호출) ─────────────────────────────
+
+  private async settleSellerInTx(tx: any, order: any) {
+    const priceRp = order.amountRp ?? 0;
+    if (priceRp === 0) return;
+
+    const platformFee = Math.floor(priceRp * 0.10);
+    const sellerNet = priceRp - platformFee;
+    const sellerBonus = Math.floor(priceRp * 0.05);
+    const sellerId = order.product.sellerId;
+
+    const latest = await tx.pointLog.findFirst({
+      where: { userId: sellerId },
+      orderBy: { createdAt: 'desc' },
+    });
+    const balance = latest?.balance ?? 0;
+
+    await tx.pointLog.create({
+      data: {
+        userId: sellerId,
+        type: 'EARN_SALE',
+        amount: sellerNet,
+        balance: balance + sellerNet,
+        memo: `판매 정산 (신고 승인): ${order.product.title}`,
+      },
+    });
+
+    await tx.pointLog.create({
+      data: {
+        userId: sellerId,
+        type: 'EARN_BONUS',
+        amount: sellerBonus,
+        balance: balance + sellerNet + sellerBonus,
+        memo: `판매 수수료 환원 보상 (신고 승인): ${order.product.title}`,
+      },
+    });
+
+    const seller = await tx.user.findUnique({
+      where: { id: sellerId },
+      select: { tokenPercentage: true },
+    });
+    const newPct = Math.min((seller?.tokenPercentage ?? 10) + 1, 100);
+    await tx.user.update({
+      where: { id: sellerId },
+      data: { tokenPercentage: newPct },
+    });
   }
 }
