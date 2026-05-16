@@ -109,6 +109,11 @@ export class ProductsService {
 
     if (!product) throw new NotFoundException('상품을 찾을 수 없습니다');
 
+    await this.prisma.product.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } },
+    });
+
     const avgRating =
       product.reviews.length > 0
         ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length

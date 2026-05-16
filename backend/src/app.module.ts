@@ -10,6 +10,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { WishlistModule } from './wishlist/wishlist.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     ReportsModule,
     AdminModule,
     SchedulerModule,
+    WishlistModule,
+    CartModule,
   ],
 })
 export class AppModule {}
