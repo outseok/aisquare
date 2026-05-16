@@ -2,17 +2,24 @@ import {
   Injectable, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TokenService } from '../token/token.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private tokenService: TokenService,
+  ) {}
 
   async create(reviewerId: string, orderId: string, dto: CreateReviewDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { review: true },
+      include: {
+        review: true,
+        product: { select: { sellerId: true } },
+      },
     });
     if (!order) throw new NotFoundException('주문을 찾을 수 없습니다');
     if (order.buyerId !== reviewerId) throw new ForbiddenException('구매자만 리뷰를 작성할 수 있습니다');
@@ -29,8 +36,13 @@ export class ReviewsService {
       },
     });
 
+    const sellerId = order.product.sellerId;
+
     if (dto.rating === 5) {
       await this.grant5StarBonus(order.productId);
+      await this.tokenService.grant(sellerId, 1, 'EARN_REVIEW_5', '5점 리뷰 수신');
+    } else if (dto.rating <= 2) {
+      await this.tokenService.deduct(sellerId, 1, 'DEDUCT_REVIEW_LOW', `${dto.rating}점 리뷰 수신`);
     }
 
     return review;
@@ -61,7 +73,7 @@ export class ReviewsService {
   async findByProduct(productId: string) {
     return this.prisma.review.findMany({
       where: { productId },
-      include: { reviewer: { select: { walletAddress: true } } },
+      include: { reviewer: { select: { username: true, name: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }

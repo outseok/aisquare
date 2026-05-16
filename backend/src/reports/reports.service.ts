@@ -52,7 +52,7 @@ export class ReportsService {
       reportId: report.id,
       orderId,
       productTitle: order.product.title,
-      reporterWallet: reporter?.walletAddress || reporterId,
+      reporterName: reporter?.name || reporterId,
       reason: dto.reason,
     });
 
@@ -63,7 +63,7 @@ export class ReportsService {
     const report = await this.prisma.report.findUnique({
       where: { id },
       include: {
-        reporter: { select: { walletAddress: true } },
+        reporter: { select: { username: true, name: true } },
         order: { include: { product: true } },
       },
     });

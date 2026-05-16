@@ -1,7 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable, UnauthorizedException, ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -10,94 +14,70 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async loginOrRegister(walletAddress: string) {
-    const normalizedAddress = walletAddress.toLowerCase();
+  async register(dto: RegisterDto) {
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ username: dto.username }, { email: dto.email }, { phone: dto.phone }],
+      },
+    });
+    if (existing?.username === dto.username) throw new ConflictException('이미 사용 중인 아이디입니다');
+    if (existing?.email === dto.email) throw new ConflictException('이미 사용 중인 이메일입니다');
+    if (existing?.phone === dto.phone) throw new ConflictException('이미 사용 중인 핸드폰 번호입니다');
 
-    let user = await this.prisma.user.findUnique({
-      where: { walletAddress: normalizedAddress },
+    const adminUsernames = (process.env.ADMIN_USERNAMES || '')
+      .split(',').map((u) => u.trim()).filter(Boolean);
+    const isAdmin = adminUsernames.includes(dto.username);
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        username: dto.username,
+        passwordHash,
+        name: dto.name,
+        email: dto.email,
+        phone: dto.phone,
+        isAdmin,
+      },
     });
 
-    const isNewUser = !user;
-
-    if (!user) {
-      const adminWallets = (process.env.ADMIN_WALLET_ADDRESSES || '')
-        .split(',')
-        .map((a) => a.trim().toLowerCase());
-
-      user = await this.prisma.user.create({
-        data: {
-          walletAddress: normalizedAddress,
-          isAdmin: adminWallets.includes(normalizedAddress),
-        },
-      });
-    }
-
-    if (isNewUser) {
-      await this.prisma.verificationLog.create({
-        data: {
-          userId: user.id,
-          walletAddress: normalizedAddress,
-          type: 'WALLET_REGISTER',
-          status: 'SUCCESS',
-        },
-      });
-    }
-
-    const token = this.jwtService.sign({
-      sub: user.id,
-      walletAddress: user.walletAddress,
-    });
-
-    return { accessToken: token, user };
+    const token = this.jwtService.sign({ sub: user.id, username: user.username });
+    return { accessToken: token, user: this.sanitize(user) };
   }
 
-  async completePassVerification(userId: string, phoneNumber: string) {
-    const phoneHash = crypto.createHash('sha256').update(phoneNumber).digest('hex');
-
-    const existing = await this.prisma.user.findUnique({ where: { phoneHash } });
-    if (existing && existing.id !== userId) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      await this.prisma.verificationLog.create({
-        data: {
-          userId,
-          walletAddress: user!.walletAddress,
-          type: 'PASS',
-          status: 'FAILED',
-          phoneHash,
-          meta: { reason: '이미 다른 계정에 등록된 번호' },
-        },
-      });
-      throw new UnauthorizedException('이미 다른 계정에 등록된 번호입니다');
+  async login(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({ where: { username: dto.username } });
+    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+      throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다');
+    }
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('정지 또는 탈퇴된 계정입니다');
     }
 
+    const token = this.jwtService.sign({ sub: user.id, username: user.username });
+    return { accessToken: token, user: this.sanitize(user) };
+  }
+
+  async verifyPhone(userId: string) {
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { passVerified: true, phoneHash },
+      data: { phoneVerified: true },
     });
 
     await this.prisma.verificationLog.create({
-      data: {
-        userId,
-        walletAddress: user.walletAddress,
-        type: 'PASS',
-        status: 'SUCCESS',
-        phoneHash,
-      },
+      data: { userId, type: 'PHONE', status: 'SUCCESS' },
     });
 
-    return user;
+    return this.sanitize(user);
   }
 
   async getProfile(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        walletAddress: true,
-        passVerified: true,
-        isAdmin: true,
-        createdAt: true,
-      },
-    });
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    return this.sanitize(user);
+  }
+
+  private sanitize(user: any) {
+    const { passwordHash, ...rest } = user;
+    return rest;
   }
 }

@@ -14,7 +14,6 @@ export class SchedulerService {
     private slack: SlackService,
   ) {}
 
-  // 10분마다 실행: 72시간 경과한 PENDING_CONFIRMATION 주문 자동 확정
   @Cron(CronExpression.EVERY_10_MINUTES)
   async autoConfirmOrders() {
     const pendingOrders = await this.ordersService.findPendingAutoConfirm();
@@ -30,7 +29,7 @@ export class SchedulerService {
         await this.slack.sendSettlementAlert({
           orderId: order.id,
           productTitle: order.product.title,
-          sellerWallet: order.product.seller.walletAddress,
+          sellerName: order.product.seller.name,
           amountEth: order.amountEth.toString(),
         });
 
@@ -41,7 +40,6 @@ export class SchedulerService {
     }
   }
 
-  // 매월 1일 00:00 - 월간 판매왕 보너스 지급
   @Cron('0 0 1 * *')
   async grantMonthlySalesKingBonus() {
     const lastMonth = new Date();

@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { IpfsService } from '../ipfs/ipfs.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto, SortOrder } from './dto/query-product.dto';
@@ -8,10 +7,7 @@ import { FileType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
-  constructor(
-    private prisma: PrismaService,
-    private ipfsService: IpfsService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(
     sellerId: string,
@@ -26,37 +22,14 @@ export class ProductsService {
         title: dto.title,
         description: dto.description,
         priceEth: new Prisma.Decimal(dto.priceEth),
-        mintingTime: dto.mintingTime,
         tags: dto.tags || [],
         fileKey,
         fileType,
         imageKey,
       },
-      include: { seller: { select: { walletAddress: true } } },
     });
 
     await this.grantFirstProductBonus(sellerId);
-
-    if (dto.mintingTime === 'IMMEDIATE') {
-      const metadata = this.ipfsService.buildMetadata({
-        title: product.title,
-        description: product.description,
-        fileType: product.fileType,
-        priceEth: product.priceEth.toString(),
-        sellerWallet: product.seller.walletAddress,
-        tags: product.tags,
-        productId: product.id,
-      });
-      const metadataUri = await this.ipfsService.uploadNftMetadata(metadata);
-      if (metadataUri) {
-        await this.prisma.product.update({
-          where: { id: product.id },
-          data: { metadataUri },
-        });
-        return { ...product, metadataUri };
-      }
-    }
-
     return product;
   }
 
@@ -75,19 +48,12 @@ export class ProductsService {
       isVisible: true,
       status: 'ON_SALE',
       ...(fileType && { fileType }),
-      ...(search && {
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { tags: { has: search } },
-        ],
-      }),
+      ...(search && { title: { contains: search } }),
     };
 
     let orderBy: Prisma.ProductOrderByWithRelationInput;
     switch (sort) {
       case SortOrder.REVIEWS:
-        orderBy = { reviews: { _count: 'desc' } };
-        break;
       case SortOrder.RATING:
         orderBy = { reviews: { _count: 'desc' } };
         break;
@@ -102,7 +68,7 @@ export class ProductsService {
         skip,
         take: limit || 20,
         include: {
-          seller: { select: { walletAddress: true } },
+          seller: { select: { username: true, name: true } },
           _count: { select: { reviews: true } },
           reviews: { select: { rating: true } },
         },
@@ -131,9 +97,9 @@ export class ProductsService {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
-        seller: { select: { walletAddress: true } },
+        seller: { select: { username: true, name: true } },
         reviews: {
-          include: { reviewer: { select: { walletAddress: true } } },
+          include: { reviewer: { select: { username: true, name: true } } },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
@@ -151,14 +117,11 @@ export class ProductsService {
     return { ...product, avgRating, reviewCount: product._count.reviews, _count: undefined };
   }
 
-  async getSellerStats(walletAddress: string) {
+  async getSellerStats(username: string) {
     const seller = await this.prisma.user.findUnique({
-      where: { walletAddress: walletAddress.toLowerCase() },
+      where: { username },
       include: {
-        products: {
-          where: { status: 'SOLD' },
-          select: { id: true },
-        },
+        products: { where: { status: 'SOLD' }, select: { id: true } },
       },
     });
     if (!seller) throw new NotFoundException('판매자를 찾을 수 없습니다');
@@ -192,7 +155,6 @@ export class ProductsService {
         ...(dto.priceEth !== undefined && { priceEth: new Prisma.Decimal(dto.priceEth) }),
         ...(dto.tags && { tags: dto.tags }),
       },
-      include: { seller: { select: { walletAddress: true } } },
     });
   }
 
@@ -202,10 +164,7 @@ export class ProductsService {
     if (product.sellerId !== userId) throw new ForbiddenException();
     if (product.status === 'SOLD') throw new BadRequestException('판매 완료된 상품은 삭제할 수 없습니다');
 
-    return this.prisma.product.update({
-      where: { id },
-      data: { isVisible: false },
-    });
+    return this.prisma.product.update({ where: { id }, data: { isVisible: false } });
   }
 
   private async addPointBonus(userId: string, amount: number, memo: string) {

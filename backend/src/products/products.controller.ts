@@ -1,3 +1,4 @@
+import 'multer';
 import {
   Controller, Get, Post, Patch, Delete, Param, Query, Body,
   UseGuards, Request, UseInterceptors, UploadedFiles,
@@ -41,10 +42,10 @@ export class ProductsController {
     return this.productsService.findOne(id);
   }
 
-  @Get('seller/:walletAddress/stats')
+  @Get('seller/:username/stats')
   @ApiOperation({ summary: '판매자 통계 (누적 판매수, 평점)' })
-  getSellerStats(@Param('walletAddress') walletAddress: string) {
-    return this.productsService.getSellerStats(walletAddress);
+  getSellerStats(@Param('username') username: string) {
+    return this.productsService.getSellerStats(username);
   }
 
   @ApiBearerAuth()

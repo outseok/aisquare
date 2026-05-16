@@ -2,27 +2,25 @@ import {
   Injectable, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { IpfsService } from '../ipfs/ipfs.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { Prisma } from '@prisma/client';
 import { ProductsService } from '../products/products.service';
 import { FilesService } from '../files/files.service';
+import { TokenService } from '../token/token.service';
 
-const RP_PER_ETH = 10_000_000; // 10,000 RP = 0.001 ETH → 1 ETH = 10,000,000 RP
+const RP_PER_ETH = 10_000_000;
 
 @Injectable()
 export class OrdersService {
   constructor(
     private prisma: PrismaService,
-    private ipfsService: IpfsService,
     private productsService: ProductsService,
     private filesService: FilesService,
+    private tokenService: TokenService,
   ) {}
 
   async create(buyerId: string, dto: CreateOrderDto) {
     const product = await this.prisma.product.findUnique({
       where: { id: dto.productId },
-      include: { seller: { select: { walletAddress: true } } },
     });
     if (!product) throw new NotFoundException('상품을 찾을 수 없습니다');
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
@@ -65,25 +63,6 @@ export class OrdersService {
     await this.grantSaleBonus(product.sellerId, Number(amountEth), product.title);
     await this.productsService.checkMilestoneBonuses(product.sellerId);
 
-    if (product.mintingTime === 'ON_PURCHASE') {
-      const metadata = this.ipfsService.buildMetadata({
-        title: product.title,
-        description: product.description,
-        fileType: product.fileType,
-        priceEth: product.priceEth.toString(),
-        sellerWallet: product.seller.walletAddress,
-        tags: product.tags,
-        productId: product.id,
-      });
-      const metadataUri = await this.ipfsService.uploadNftMetadata(metadata);
-      if (metadataUri) {
-        await this.prisma.product.update({
-          where: { id: product.id },
-          data: { metadataUri },
-        });
-      }
-    }
-
     return order;
   }
 
@@ -94,17 +73,31 @@ export class OrdersService {
       throw new BadRequestException('확정할 수 없는 상태입니다');
     }
 
-    return this.prisma.order.update({
+    const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED', settledAt: new Date() },
+      include: { product: { select: { sellerId: true, title: true } } },
     });
+
+    await this.tokenService.grant(
+      updated.product.sellerId, 2, 'EARN_CONFIRM', `구매 확정: ${updated.product.title}`,
+    );
+
+    return updated;
   }
 
   async autoConfirm(orderId: string) {
-    return this.prisma.order.update({
+    const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED', settledAt: new Date() },
+      include: { product: { select: { sellerId: true, title: true } } },
     });
+
+    await this.tokenService.grant(
+      updated.product.sellerId, 2, 'EARN_CONFIRM', `자동 구매 확정: ${updated.product.title}`,
+    );
+
+    return updated;
   }
 
   async getDownloadUrl(orderId: string, buyerId: string) {
@@ -139,7 +132,7 @@ export class OrdersService {
       where: { product: { sellerId } },
       include: {
         product: { select: { title: true, priceEth: true } },
-        buyer: { select: { walletAddress: true } },
+        buyer: { select: { username: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -152,7 +145,12 @@ export class OrdersService {
         autoConfirmAt: { lte: new Date() },
       },
       include: {
-        product: { select: { title: true, seller: { select: { walletAddress: true } } } },
+        product: {
+          select: {
+            title: true,
+            seller: { select: { name: true, username: true } },
+          },
+        },
       },
     });
   }

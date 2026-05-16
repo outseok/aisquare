@@ -3,27 +3,48 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
-  walletAddress String    @unique
-  passVerified  Boolean   @default(false)
-  phoneHash     String?   @unique
-  isAdmin       Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id            String     @id @default(cuid())
+  username      String     @unique
+  passwordHash  String
+  name          String
+  email         String     @unique
+  phone         String     @unique
+  phoneVerified Boolean    @default(false)
+  emailVerified Boolean    @default(false)
+  isAdmin       Boolean    @default(false)
+  status        UserStatus @default(ACTIVE)
+  trustToken    Int        @default(30)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   products          Product[]
   orders            Order[]
   reviews           Review[]
   reports           Report[]
   pointLogs         PointLog[]
+  tokenLogs         TokenLog[]
   verificationLogs  VerificationLog[]
 
   @@map("users")
+}
+
+model TokenLog {
+  id      String       @id @default(cuid())
+  userId  String
+  user    User         @relation(fields: [userId], references: [id])
+  type    TokenLogType
+  amount  Int
+  balance Int
+  memo    String?
+
+  createdAt DateTime @default(now())
+
+  @@map("token_logs")
 }
 
 model Product {
@@ -31,16 +52,14 @@ model Product {
   sellerId    String
   seller      User          @relation(fields: [sellerId], references: [id])
   title       String
-  description String
+  description String        @db.Text
   imageKey    String?
   fileKey     String
   fileType    FileType
   priceEth    Decimal       @db.Decimal(30, 18)
-  mintingTime MintingTime
   isVisible   Boolean       @default(true)
   status      ProductStatus @default(ON_SALE)
-  tags        String[]
-  metadataUri String?
+  tags        Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,7 +101,7 @@ model Review {
   reviewerId String
   reviewer   User    @relation(fields: [reviewerId], references: [id])
   rating     Int
-  content    String
+  content    String  @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -96,8 +115,8 @@ model Report {
   order      Order        @relation(fields: [orderId], references: [id])
   reporterId String
   reporter   User         @relation(fields: [reporterId], references: [id])
-  reason     String
-  imageKeys  String[]
+  reason     String       @db.Text
+  imageKeys  Json
   status     ReportStatus @default(PENDING)
 
   createdAt DateTime @default(now())
@@ -133,18 +152,22 @@ model AdminLog {
 }
 
 model VerificationLog {
-  id            String           @id @default(cuid())
-  userId        String
-  user          User             @relation(fields: [userId], references: [id])
-  walletAddress String
-  type          VerificationType
-  status        VerifyStatus
-  phoneHash     String?
-  meta          Json?
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      VerificationType
+  status    VerifyStatus
+  meta      Json?
 
   createdAt DateTime @default(now())
 
   @@map("verification_logs")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
 }
 
 enum FileType {
@@ -158,12 +181,6 @@ enum ProductStatus {
   ON_SALE
   SOLD
   HIDDEN
-}
-
-enum MintingTime {
-  IMMEDIATE
-  ON_PURCHASE
-  MANUAL
 }
 
 enum PayMethod {
@@ -195,10 +212,16 @@ enum PointLogType {
   CONVERT
 }
 
+enum TokenLogType {
+  EARN_CONFIRM
+  EARN_REVIEW_5
+  DEDUCT_REVIEW_LOW
+  DEDUCT_REPORT
+}
+
 enum VerificationType {
-  WALLET_REGISTER
-  PASS
   PHONE
+  EMAIL
 }
 
 enum VerifyStatus {

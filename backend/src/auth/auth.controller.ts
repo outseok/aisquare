@@ -1,17 +1,33 @@
-import { Controller, Post, Body, Get, UseGuards, Request, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('wallet-login')
-  @ApiOperation({ summary: 'MetaMask 지갑 주소로 로그인/회원가입' })
-  async walletLogin(@Body() body: { walletAddress: string }) {
-    return this.authService.loginOrRegister(body.walletAddress);
+  @Post('register')
+  @ApiOperation({ summary: '회원가입' })
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Post('login')
+  @ApiOperation({ summary: '로그인' })
+  login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('verify-phone')
+  @ApiOperation({ summary: '핸드폰 인증 완료 처리' })
+  verifyPhone(@Request() req) {
+    return this.authService.verifyPhone(req.user.id);
   }
 
   @ApiBearerAuth()
@@ -20,13 +36,5 @@ export class AuthController {
   @ApiOperation({ summary: '내 프로필 조회' })
   getProfile(@Request() req) {
     return this.authService.getProfile(req.user.id);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Patch('pass-verify')
-  @ApiOperation({ summary: 'PASS 본인인증 완료 처리 (백엔드 콜백)' })
-  completePassVerify(@Request() req, @Body() body: { phoneNumber: string }) {
-    return this.authService.completePassVerification(req.user.id, body.phoneNumber);
   }
 }

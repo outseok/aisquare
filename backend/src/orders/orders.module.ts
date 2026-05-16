@@ -3,10 +3,10 @@ import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { ProductsModule } from '../products/products.module';
 import { FilesModule } from '../files/files.module';
-import { IpfsModule } from '../ipfs/ipfs.module';
+import { TokenModule } from '../token/token.module';
 
 @Module({
-  imports: [ProductsModule, FilesModule, IpfsModule],
+  imports: [ProductsModule, FilesModule, TokenModule],
   providers: [OrdersService],
   controllers: [OrdersController],
   exports: [OrdersService],

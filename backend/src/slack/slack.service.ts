@@ -10,7 +10,7 @@ export class SlackService {
     reportId: string;
     orderId: string;
     productTitle: string;
-    reporterWallet: string;
+    reporterName: string;
     reason: string;
   }) {
     await this.send({
@@ -22,7 +22,7 @@ export class SlackService {
             { title: '신고 ID', value: payload.reportId, short: true },
             { title: '주문 ID', value: payload.orderId, short: true },
             { title: '상품명', value: payload.productTitle, short: false },
-            { title: '신고자 지갑', value: payload.reporterWallet, short: false },
+            { title: '신고자', value: payload.reporterName, short: false },
             { title: '신고 사유', value: payload.reason, short: false },
           ],
           footer: `Recode AI | ${new Date().toISOString()}`,
@@ -34,7 +34,7 @@ export class SlackService {
   async sendSettlementAlert(payload: {
     orderId: string;
     productTitle: string;
-    sellerWallet: string;
+    sellerName: string;
     amountEth: string;
   }) {
     await this.send({
@@ -45,7 +45,7 @@ export class SlackService {
           fields: [
             { title: '주문 ID', value: payload.orderId, short: true },
             { title: '상품명', value: payload.productTitle, short: true },
-            { title: '판매자 지갑', value: payload.sellerWallet, short: false },
+            { title: '판매자', value: payload.sellerName, short: false },
             { title: '정산 금액', value: `${payload.amountEth} ETH`, short: true },
           ],
           footer: `Recode AI | ${new Date().toISOString()}`,
