@@ -81,7 +81,7 @@ export class AuthService {
     }
 
     // 인증 결과 조회
-    let cert: { certified: boolean; phone: string; name: string };
+    let cert: { certified: boolean; phone: string; name: string; unique_key: string };
     try {
       const certRes = await axios.get(
         `https://api.iamport.kr/certifications/${dto.impUid}`,
@@ -109,7 +109,7 @@ export class AuthService {
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { phoneVerified: true },
+      data: { phoneVerified: true, passId: cert.unique_key ?? null },
     });
 
     await this.prisma.verificationLog.create({

@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ConfirmTossPaymentDto } from './dto/confirm-toss-payment.dto';
+import { ConfirmSquarePaymentDto } from './dto/confirm-square-payment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PassVerifiedGuard } from '../auth/pass-verified.guard';
 
@@ -41,6 +42,17 @@ export class OrdersController {
     @Body() dto: ConfirmTossPaymentDto,
   ) {
     return this.ordersService.confirmTossPayment(id, req.user.id, dto);
+  }
+
+  @Post(':id/pay/square')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: 'Square 결제 확정 (BE2 txHash 전달)' })
+  confirmSquarePayment(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() dto: ConfirmSquarePaymentDto,
+  ) {
+    return this.ordersService.confirmSquarePayment(id, req.user.id, dto);
   }
 
   @Patch(':id/confirm')

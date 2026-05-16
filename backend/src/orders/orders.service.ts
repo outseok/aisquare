@@ -5,6 +5,7 @@ import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ConfirmTossPaymentDto } from './dto/confirm-toss-payment.dto';
+import { ConfirmSquarePaymentDto } from './dto/confirm-square-payment.dto';
 import { ProductsService } from '../products/products.service';
 import { FilesService } from '../files/files.service';
 import { TokenService } from '../token/token.service';
@@ -80,6 +81,28 @@ export class OrdersService {
     const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: 'PENDING_CONFIRMATION', txHash: dto.paymentKey },
+      include: { product: { select: { sellerId: true, title: true, price: true } } },
+    });
+
+    await this.grantSaleBonus(updated.product.sellerId, updated.product.price, updated.product.title);
+    await this.productsService.checkMilestoneBonuses(updated.product.sellerId);
+
+    return updated;
+  }
+
+  async confirmSquarePayment(orderId: string, buyerId: string, dto: ConfirmSquarePaymentDto) {
+    const order = await this.getOrderOrThrow(orderId);
+    if (order.buyerId !== buyerId) throw new ForbiddenException();
+    if (order.status !== 'PAYMENT_PENDING') {
+      throw new BadRequestException('결제 대기 상태가 아닙니다');
+    }
+    if (order.paymentMethod !== 'SQUARE') {
+      throw new BadRequestException('Square 결제 주문이 아닙니다');
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'PENDING_CONFIRMATION', txHash: dto.txHash },
       include: { product: { select: { sellerId: true, title: true, price: true } } },
     });
 

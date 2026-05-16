@@ -15,7 +15,7 @@ export class WalletService {
   async prepareCharge(userId: string, dto: PrepareChargeDto) {
     const squareAmount = Math.floor(dto.amountKrw / SQUARE_RATE);
     if (squareAmount < 1) {
-      throw new BadRequestException(`최소 ${SQUARE_RATE.toLocaleString()}원부터 충전 가능합니다`);
+      throw new BadRequestException(`최소 1원부터 충전 가능합니다`);
     }
 
     const charge = await this.prisma.walletCharge.create({
