@@ -70,6 +70,18 @@ export const productApi = {
     }),
 }
 
+// ── 찜 ──────────────────────────────────────────────────────────────────────
+export const wishlistApi = {
+  getList: () => api.get('/wishlists'),
+  remove: (productId) => api.delete(`/wishlists/${productId}`),
+}
+
+// ── 장바구니 ─────────────────────────────────────────────────────────────────
+export const cartApi = {
+  getList: () => api.get('/cart'),
+  remove: (productId) => api.delete(`/cart/${productId}`),
+}
+
 // ── 주문 ────────────────────────────────────────────────────────────────────
 export const orderApi = {
   getList: () => api.get('/orders'),

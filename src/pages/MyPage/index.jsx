@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Wallet, ShoppingBag, Store, ShieldCheck, ShieldOff, User, Edit3, Check, X } from 'lucide-react'
+import { Wallet, ShoppingBag, Store, ShieldCheck, ShieldOff, User, Edit3, Check, X, Heart, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePass } from '../../hooks/usePass'
 import { useAuthStore } from '../../store/authStore'
@@ -7,6 +7,8 @@ import { userApi } from '../../api'
 import PurchaseHistory from './PurchaseHistory'
 import SalesHistory from './SalesHistory'
 import WalletManager from './WalletManager'
+import Wishlist from './Wishlist'
+import Cart from './Cart'
 import TokenBadge from '../../components/common/TokenBadge'
 import toast from 'react-hot-toast'
 
@@ -15,6 +17,8 @@ const TABS = [
   { id: 'wallet',    label: '지갑 관리', icon: Wallet },
   { id: 'purchases', label: '구매 내역', icon: ShoppingBag },
   { id: 'sales',     label: '판매 내역', icon: Store },
+  { id: 'wishlist',  label: '찜 목록',   icon: Heart },
+  { id: 'cart',      label: '장바구니',  icon: ShoppingCart },
 ]
 
 function EditableField({ label, value, onSave, inputType = 'text' }) {
@@ -188,6 +192,8 @@ export default function MyPage() {
       case 'wallet':    return <WalletManager />
       case 'purchases': return <PurchaseHistory />
       case 'sales':     return <SalesHistory />
+      case 'wishlist':  return <Wishlist />
+      case 'cart':      return <Cart />
       default:          return null
     }
   }
