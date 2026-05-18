@@ -50,7 +50,7 @@ export class PointsService {
     await this.prisma.pointLog.create({
       data: {
         userId,
-        type: 'WITHDRAW',
+        type: 'CONVERT',
         amount: -dto.amount,
         balance: newBalance,
         memo: `출금 ${dto.amount} RP → ${krwToWithdraw.toLocaleString()}원`,
@@ -65,11 +65,11 @@ export class PointsService {
     };
   }
 
-  async getUserTokenPercentage(userId: string) {
+  async getUserTrustToken(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { tokenPercentage: true },
+      select: { trustToken: true },
     });
-    return { tokenPercentage: user?.tokenPercentage ?? 10 };
+    return { trustToken: user?.trustToken ?? 15 };
   }
 }

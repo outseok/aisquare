@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Square - 테스트 페이지</title>
+  <script src="https://js.tosspayments.com/v2/standard"></script>
+  <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #222; }
+    h1 { text-align: center; padding: 28px 0 8px; font-size: 22px; color: #1a1a1a; }
+    .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 24px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 16px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+    label { display: block; font-size: 12px; color: #555; margin-bottom: 4px; margin-top: 12px; }
+    input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 7px; font-size: 14px; outline: none; }
+    input:focus { border-color: #4f46e5; }
+    button { width: 100%; margin-top: 14px; padding: 10px; border: none; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+    button:hover { opacity: .85; }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-green { background: #16a34a; color: #fff; }
+    .btn-blue { background: #0ea5e9; color: #fff; }
+    .btn-orange { background: #ea580c; color: #fff; }
+    .log { margin-top: 14px; background: #f8f8f8; border-radius: 7px; padding: 10px 12px; font-size: 12px; font-family: monospace; min-height: 60px; max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #333; }
+    .status { display: inline-block; margin-left: 8px; font-size: 12px; padding: 2px 8px; border-radius: 20px; vertical-align: middle; }
+    .ok { background: #dcfce7; color: #15803d; }
+    .fail { background: #fee2e2; color: #dc2626; }
+    .warn { background: #fef9c3; color: #a16207; }
+    .token-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 7px; padding: 8px 10px; font-size: 11px; font-family: monospace; word-break: break-all; margin-top: 10px; color: #166534; min-height: 36px; }
+    .wide { grid-column: 1 / -1; }
+  </style>
+</head>
+<body>
+
+<h1>AI Square 테스트 페이지</h1>
+<p class="subtitle">서버: <strong>http://localhost:3000</strong></p>
+
+<div class="container">
+
+  <!-- ① 로그인 -->
+  <div class="card">
+    <h2>① 회원가입 / 로그인</h2>
+    <label>아이디</label><input id="username" value="testuser01" />
+    <label>비밀번호</label><input id="password" type="password" value="Test1234!" />
+    <label>이름 (회원가입용)</label><input id="name" value="홍길동" />
+    <label>닉네임 (회원가입용)</label><input id="nickname" value="길동이" />
+    <label>이메일 (회원가입용)</label><input id="email" value="test01@test.com" />
+    <label>전화번호 (회원가입용, 하이픈 없이)</label><input id="phone" value="01012345678" />
+    <button class="btn-primary" onclick="register()">회원가입</button>
+    <button class="btn-blue" onclick="login()">로그인</button>
+    <div class="log" id="authLog">결과가 여기 표시됩니다</div>
+    <div style="margin-top:10px; font-size:12px; color:#555">저장된 토큰</div>
+    <div class="token-box" id="tokenBox">없음</div>
+  </div>
+
+  <!-- ② PASS 본인인증 -->
+  <div class="card">
+    <h2>② 본인인증 <span class="status warn">로그인 필요</span></h2>
+    <p style="font-size:12px;color:#666;margin-top:8px;line-height:1.6">
+      인증 완료 후 자동으로 <code>/auth/verify-phone</code>을 호출합니다.<br>
+      PASS는 실제 통신사 회선 필요 · 카카오는 카카오톡 앱 필요
+    </p>
+    <button class="btn-green" onclick="startCert('kakao')" style="margin-top:12px">카카오 본인인증</button>
+    <button class="btn-primary" onclick="startCert('pass')" style="margin-top:8px; background:#6366f1">PASS 본인인증</button>
+    <div class="log" id="passLog">결과가 여기 표시됩니다</div>
+  </div>
+
+  <!-- ③ Square 충전 (Toss) -->
+  <div class="card">
+    <h2>③ Square 충전 (Toss 결제) <span class="status warn">PASS 인증 필요</span></h2>
+    <p style="font-size:12px;color:#666;margin-top:8px;line-height:1.6">
+      1,100원 = 1,000 Square (최소 5,500원)
+    </p>
+    <label>충전 금액 (원, 1,100 단위)</label>
+    <input id="chargeAmount" type="number" value="5500" step="1100" min="5500" />
+    <button class="btn-orange" onclick="startCharge()">Toss 결제창 열기</button>
+    <div class="log" id="chargeLog">결과가 여기 표시됩니다</div>
+  </div>
+
+  <!-- ④ 내 정보 조회 -->
+  <div class="card">
+    <h2>④ 내 정보 / 잔액 조회</h2>
+    <button class="btn-primary" onclick="getProfile()">프로필 조회</button>
+    <button class="btn-blue" onclick="getPointHistory()" style="margin-top:8px">포인트 내역</button>
+    <button class="btn-green" onclick="getChargeHistory()" style="margin-top:8px">충전 내역</button>
+    <div class="log" id="infoLog">결과가 여기 표시됩니다</div>
+  </div>
+
+</div>
+
+<script>
+  const BASE = 'http://localhost:3000';
+  const IMP_CODE = 'imp22275820';
+  let TOSS_CLIENT_KEY = '';
+  let token = localStorage.getItem('test_token') || '';
+
+  function loadTossClientKey() {
+    if (!token) return;
+    fetch(BASE + '/wallet/toss-client-key', {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(r => r.json()).then(d => { TOSS_CLIENT_KEY = d.clientKey; }).catch(() => {});
+  }
+
+  if (token) { document.getElementById('tokenBox').textContent = token; loadTossClientKey(); }
+
+  function saveToken(t) {
+    token = t;
+    localStorage.setItem('test_token', t);
+    document.getElementById('tokenBox').textContent = t;
+    loadTossClientKey();
+  }
+
+  function log(id, obj, isError = false) {
+    const el = document.getElementById(id);
+    const text = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    el.textContent = text;
+    el.style.color = isError ? '#dc2626' : '#333';
+  }
+
+  async function api(method, path, body) {
+    const res = await fetch(BASE + path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  async function register() {
+    const r = await api('POST', '/auth/register', {
+      username: document.getElementById('username').value,
+      password: document.getElementById('password').value,
+      name: document.getElementById('name').value,
+      nickname: document.getElementById('nickname').value,
+      email: document.getElementById('email').value,
+      phone: document.getElementById('phone').value,
+    });
+    if (r.ok) { saveToken(r.data.accessToken); log('authLog', r.data); }
+    else log('authLog', r.data, true);
+  }
+
+  async function login() {
+    const r = await api('POST', '/auth/login', {
+      username: document.getElementById('username').value,
+      password: document.getElementById('password').value,
+    });
+    if (r.ok) { saveToken(r.data.accessToken); log('authLog', r.data); }
+    else log('authLog', r.data, true);
+  }
+
+  function startCert(type) {
+    if (!token) { log('passLog', '먼저 로그인하세요', true); return; }
+    IMP.init(IMP_CODE);
+    const params = {
+      merchant_uid: 'cert_' + Date.now(),
+      popup: true,
+    };
+    if (type === 'kakao') params.pg = 'kakao';
+    IMP.certification(params, async (res) => {
+      if (!res.success) {
+        log('passLog', '인증 실패: ' + (res.error_msg || '취소됨'), true);
+        return;
+      }
+      log('passLog', 'imp_uid 발급됨: ' + res.imp_uid + '\n\n서버 검증 중...');
+      const r = await api('POST', '/auth/verify-phone', { impUid: res.imp_uid });
+      log('passLog', r.data, !r.ok);
+    });
+  }
+
+  async function startCharge() {
+    if (!token) { log('chargeLog', '먼저 로그인하세요', true); return; }
+    if (!TOSS_CLIENT_KEY) { log('chargeLog', '.env의 TOSS_CLIENT_KEY를 채워주세요', true); return; }
+    const amountKrw = parseInt(document.getElementById('chargeAmount').value);
+
+    log('chargeLog', '충전 준비 중...');
+    const prep = await api('POST', '/wallet/charge', { amountKrw });
+    if (!prep.ok) { log('chargeLog', prep.data, true); return; }
+
+    const { chargeId, tossOrderId, squareAmount } = prep.data;
+    log('chargeLog', `준비 완료\nchargeId: ${chargeId}\ntossOrderId: ${tossOrderId}\nsquare: ${squareAmount}`);
+
+    const toss = TossPayments(TOSS_CLIENT_KEY);
+    const payment = toss.payment({ customerKey: 'test-customer-' + Date.now() });
+
+    try {
+      await payment.requestPayment({
+        method: 'CARD',
+        amount: { currency: 'KRW', value: amountKrw },
+        orderId: tossOrderId,
+        orderName: `Square ${squareAmount.toLocaleString()} 충전`,
+        successUrl: window.location.href + '?chargeId=' + chargeId,
+        failUrl: window.location.href + '?fail=1',
+      });
+    } catch (e) {
+      log('chargeLog', '결제창 취소 또는 오류: ' + e.message, true);
+    }
+  }
+
+  async function getProfile() {
+    const r = await api('GET', '/auth/profile');
+    log('infoLog', r.data, !r.ok);
+  }
+
+  async function getPointHistory() {
+    const r = await api('GET', '/auth/me/points');
+    log('infoLog', r.data, !r.ok);
+  }
+
+  async function getChargeHistory() {
+    const r = await api('GET', '/wallet/charges');
+    log('infoLog', r.data, !r.ok);
+  }
+
+  // Toss 리다이렉트 후 자동 confirm 처리
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    const paymentKey = params.get('paymentKey');
+    const orderId = params.get('orderId');
+    const amount = params.get('amount');
+    const chargeId = params.get('chargeId');
+
+    if (paymentKey && orderId && amount && chargeId) {
+      log('chargeLog', `결제 완료 수신\npaymentKey: ${paymentKey}\n\n서버 확정 중...`);
+      const r = await api('POST', `/wallet/charge/${chargeId}/confirm`, {
+        paymentKey, tossOrderId: orderId, amount: parseInt(amount),
+      });
+      log('chargeLog', r.data, !r.ok);
+      history.replaceState({}, '', location.pathname);
+    }
+  })();
+</script>
+</body>
+</html>

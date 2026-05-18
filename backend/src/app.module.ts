@@ -14,7 +14,6 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { CartModule } from './cart/cart.module';
 import { FabricModule } from './fabric/fabric.module';
-import { PaymentsModule } from './payments/payments.module';
 import { PointsModule } from './points/points.module';
 import { WalletModule } from './wallet/wallet.module';
 
@@ -35,7 +34,6 @@ import { WalletModule } from './wallet/wallet.module';
     WishlistModule,
     CartModule,
     FabricModule,
-    PaymentsModule,
     PointsModule,
     WalletModule,
   ],

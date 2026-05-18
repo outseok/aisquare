@@ -41,9 +41,9 @@ export class PointsController {
     return this.pointsService.withdraw(req.user.id, dto);
   }
 
-  @Get('token-percentage')
-  @ApiOperation({ summary: '내 토큰 퍼센테이지(매너 온도) 조회' })
-  getTokenPercentage(@Request() req) {
-    return this.pointsService.getUserTokenPercentage(req.user.id);
+  @Get('trust-token')
+  @ApiOperation({ summary: '내 신뢰 토큰 조회' })
+  getTrustToken(@Request() req) {
+    return this.pointsService.getUserTrustToken(req.user.id);
   }
 }

@@ -36,4 +36,10 @@ export class WalletController {
   getChargeHistory(@Request() req) {
     return this.walletService.getChargeHistory(req.user.id);
   }
+
+  @Get('toss-client-key')
+  @ApiOperation({ summary: 'Toss 클라이언트 키 (프론트엔드용)' })
+  getTossClientKey() {
+    return { clientKey: process.env.TOSS_CLIENT_KEY };
+  }
 }
