@@ -199,27 +199,37 @@ export default function MyPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-white mb-6">마이페이지</h1>
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="bg-surface-card border border-surface-border rounded-2xl overflow-hidden flex min-h-[680px]">
+        {/* 사이드바 */}
+        <aside className="w-48 shrink-0 border-r border-surface-border flex flex-col">
+          <div className="px-5 py-5 border-b border-surface-border flex items-center justify-center">
+            <h1 className="text-xl font-bold text-white">마이페이지</h1>
+          </div>
+          <div className="flex flex-col py-2">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex items-center gap-3 px-6 py-4 text-base font-medium transition-colors w-full text-left ${
+                activeTab === id
+                  ? 'text-white bg-primary/15 border-r-2 border-primary'
+                  : 'text-gray-500 hover:text-white hover:bg-surface'
+              }`}
+            >
+              <Icon size={17} />
+              {label}
+            </button>
+          ))}
+          </div>
+        </aside>
 
-      <div className="flex gap-1 bg-surface-card border border-surface-border rounded-2xl p-1 mb-6 overflow-x-auto">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors flex-1 justify-center ${
-              activeTab === id
-                ? 'bg-primary text-white'
-                : 'text-gray-400 hover:text-white hover:bg-surface'
-            }`}
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
+        {/* 콘텐츠 */}
+        <div className="flex-1 min-w-0 p-6">
+
+          {renderContent()}
+        </div>
       </div>
-
-      {renderContent()}
     </div>
   )
 }
