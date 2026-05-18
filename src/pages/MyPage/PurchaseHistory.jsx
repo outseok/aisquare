@@ -122,9 +122,9 @@ export default function PurchaseHistory() {
               </div>
               <p className="text-white font-semibold truncate">{order.productTitle}</p>
               <p className="text-sm text-gray-500 mt-0.5">
-                {order.paymentMethod === 'RP'
-                  ? `${order.rpAmount} RP`
-                  : `${order.price} ETH`}
+                {order.paymentMethod === 'SQUARE'
+                  ? `${order.paymentAmount?.toLocaleString()} Square`
+                  : `₩${order.paymentAmount?.toLocaleString()}`}
                 <span className="mx-2">·</span>
                 판매자: {order.sellerName}
               </p>

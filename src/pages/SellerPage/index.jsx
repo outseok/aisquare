@@ -52,7 +52,7 @@ function ProductCard({ product, isMine, onToggleVisibility }) {
       <div className="flex-1 min-w-0">
         <p className="text-white font-medium truncate">{product.title}</p>
         <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
-          <span>{product.price} ETH</span>
+          <span>₩{(product.priceKrw ?? product.price)?.toLocaleString()}</span>
           <span>판매 {product.salesCount}건</span>
         </div>
       </div>
@@ -127,7 +127,7 @@ function EditableBio({ bio, onSave }) {
 }
 
 export default function SellerPage() {
-  const { address } = useParams()
+  const { id: address } = useParams()
 
   const [seller, setSeller] = useState(null)
   const [products, setProducts] = useState([])

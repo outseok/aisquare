@@ -30,8 +30,8 @@ function GNB() {
     <nav className="sticky top-0 z-40 border-b border-surface-border bg-surface/80 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="text-lg font-bold text-white flex items-center gap-2">
-          <span className="text-primary">Recode</span>
-          <span>AI</span>
+          <span className="text-primary">AI</span>
+          <span> Square</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-2">
@@ -162,7 +162,7 @@ export default function App() {
           <Routes>
             <Route path="/"                    element={<PlaceholderPage title="마켓 메인 (장우혁)" />} />
             <Route path="/products/:id"        element={<PlaceholderPage title="상품 상세 (장우혁)" />} />
-            <Route path="/seller/:address"     element={<SellerPage />} />
+            <Route path="/seller/:id"            element={<SellerPage />} />
             <Route path="/login"               element={<Login />} />
             <Route path="/register"            element={<Register />} />
             <Route path="/mypage"              element={<PrivateRoute><MyPage /></PrivateRoute>} />
