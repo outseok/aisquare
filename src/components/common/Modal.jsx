@@ -32,13 +32,13 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* 모달 패널 */}
-      <div className={`relative w-full ${sizeClass} bg-surface-card border border-surface-border rounded-2xl shadow-2xl`}>
+      <div className={`relative w-full ${sizeClass} bg-surface-card border border-surface-border rounded-2xl shadow-xl`}>
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
-            <h2 className="text-lg font-bold text-white">{title}</h2>
+            <h2 className="text-lg font-bold text-gray-900">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-surface text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-lg hover:bg-surface text-gray-400 hover:text-gray-700 transition-colors"
             >
               <X size={18} />
             </button>

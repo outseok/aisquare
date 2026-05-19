@@ -17,8 +17,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const msg = err.response?.data?.message ?? '서버 오류가 발생했습니다.'
-    if (err.response?.status !== 401) toast.error(msg)
+    if (err.response && err.response.status !== 401) {
+      const msg = err.response.data?.message ?? '서버 오류가 발생했습니다.'
+      toast.error(msg)
+    }
     return Promise.reject(err)
   }
 )
@@ -55,6 +57,12 @@ export const pointApi = {
   getHistory: (params) => api.get('/wallet/point/history', { params }),
 }
 
+// ── 외부 포인트 전환 (Fabric 멀티 조직) ──────────────────────────────────────
+export const exchangeApi = {
+  request: (data) => api.post('/wallet/exchange/request', data),
+  getHistory: () => api.get('/wallet/exchange/history'),
+}
+
 // ── 상품 ────────────────────────────────────────────────────────────────────
 export const productApi = {
   getList: (params) => api.get('/products', { params }),
@@ -73,12 +81,14 @@ export const productApi = {
 // ── 찜 ──────────────────────────────────────────────────────────────────────
 export const wishlistApi = {
   getList: () => api.get('/wishlists'),
+  add: (productId) => api.post('/wishlists', { productId }),
   remove: (productId) => api.delete(`/wishlists/${productId}`),
 }
 
 // ── 장바구니 ─────────────────────────────────────────────────────────────────
 export const cartApi = {
   getList: () => api.get('/cart'),
+  add: (productId) => api.post('/cart', { productId }),
   remove: (productId) => api.delete(`/cart/${productId}`),
 }
 
@@ -87,6 +97,7 @@ export const orderApi = {
   getList: () => api.get('/orders'),
   create: (productId, paymentMethod) =>
     api.post('/orders', { productId, paymentMethod }),
+  checkout: (data) => api.post('/orders/checkout', data),
   confirm: (orderId) => api.post(`/orders/${orderId}/confirm`),
   getDownloadUrl: (orderId) => api.get(`/orders/${orderId}/download`),
 }
@@ -95,6 +106,7 @@ export const orderApi = {
 export const reviewApi = {
   create: (orderId, data) => api.post('/reviews', { orderId, ...data }),
   getBySeller: (address) => api.get(`/sellers/${address}/reviews`),
+  getByProduct: (productId) => api.get(`/products/${productId}/reviews`),
 }
 
 // ── 신고 ────────────────────────────────────────────────────────────────────

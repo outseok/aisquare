@@ -38,3 +38,17 @@ export const ORDER_STATUS_LABEL = {
   REPORTED: '신고 접수됨',
   REFUNDED: '환불 완료',
 }
+
+// 외부 포인트 연동 파트너 (Hyperledger Fabric 멀티 조직)
+export const EXCHANGE_PARTNERS = [
+  { id: 'naver', name: '네이버페이', short: 'N', bg: 'bg-[#03C75A]', text: 'text-white',     rateIn: 0.9,  rateOut: 0.9  },
+  { id: 'kakao', name: '카카오페이', short: 'K', bg: 'bg-[#FFCD00]', text: 'text-gray-900',  rateIn: 0.9,  rateOut: 0.9  },
+  { id: 'toss',  name: '토스페이',  short: 'T', bg: 'bg-[#0064FF]', text: 'text-white',     rateIn: 0.95, rateOut: 0.95 },
+  { id: 'ssg',   name: 'SSG페이',   short: 'S', bg: 'bg-[#E3001B]', text: 'text-white',     rateIn: 0.88, rateOut: 0.88 },
+]
+
+export const EXCHANGE_STATUS_CONFIG = {
+  PENDING:   { label: 'Fabric 서명 대기', className: 'bg-yellow-500/10 text-yellow-400' },
+  COMPLETED: { label: '전환 완료',        className: 'bg-green-500/10  text-green-400'  },
+  FAILED:    { label: '전환 실패',        className: 'bg-red-500/10    text-red-400'    },
+}

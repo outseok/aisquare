@@ -27,7 +27,7 @@ export default function TokenBadge({ pct, size = 'md' }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-400">토큰 퍼센테이지</span>
+        <span className="text-sm text-gray-600">토큰 퍼센테이지</span>
         <div className="flex items-center gap-2">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             pct >= 70 ? 'bg-green-500/10 text-green-400' :

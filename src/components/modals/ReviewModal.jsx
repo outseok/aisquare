@@ -4,7 +4,7 @@ import Modal from '../common/Modal'
 import { reviewApi } from '../../api'
 import toast from 'react-hot-toast'
 
-function StarRating({ value, onChange, readonly = false }) {
+export function StarRating({ value, onChange, readonly = false }) {
   const [hover, setHover] = useState(0)
   return (
     <div className="flex gap-1">
@@ -61,7 +61,7 @@ export default function ReviewModal({ isOpen, onClose, order, onSuccess }) {
       <div className="space-y-5">
         <div>
           <p className="text-sm text-gray-400">
-            상품: <span className="text-white font-medium">{order?.productTitle}</span>
+            상품: <span className="text-gray-900 font-medium">{order?.productTitle}</span>
           </p>
           <p className="text-xs text-gray-500 mt-1">
             리뷰 작성 시 <span className="text-yellow-400 font-medium">100 Point</span>가 Point Wallet에 적립됩니다.
@@ -113,4 +113,3 @@ export default function ReviewModal({ isOpen, onClose, order, onSuccess }) {
   )
 }
 
-export { StarRating }

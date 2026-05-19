@@ -5,14 +5,14 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#6366f1',
-          dark: '#4f46e5',
-          light: '#818cf8',
+          DEFAULT: '#1557FF',
+          dark: '#0D3FCC',
+          light: '#4D7FFF',
         },
         surface: {
-          DEFAULT: '#1e1e2e',
-          card: '#2a2a3e',
-          border: '#3a3a52',
+          DEFAULT: '#f7f8fa',
+          card: '#ffffff',
+          border: '#efefef',
         },
       },
     },

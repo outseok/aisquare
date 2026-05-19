@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Wallet, ShoppingBag, Store, ShieldCheck, ShieldOff, User, Edit3, Check, X, Heart, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePass } from '../../hooks/usePass'
@@ -36,10 +37,10 @@ function EditableField({ label, value, onSave, inputType = 'text' }) {
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{label}</p>
         <div className="flex items-center gap-2">
-          <p className="text-sm text-gray-300">{value || '—'}</p>
+          <p className="text-sm text-gray-700">{value || '—'}</p>
           <button
             onClick={() => setEditing(true)}
-            className="p-1 rounded text-gray-600 hover:text-gray-400 transition-colors"
+            className="p-1 rounded text-gray-400 hover:text-gray-600 transition-colors"
           >
             <Edit3 size={13} />
           </button>
@@ -59,7 +60,7 @@ function EditableField({ label, value, onSave, inputType = 'text' }) {
           onChange={(e) => setDraft(e.target.value)}
           autoFocus
         />
-        <button onClick={handleCancel} className="p-1.5 rounded text-gray-500 hover:text-white transition-colors">
+        <button onClick={handleCancel} className="p-1.5 rounded text-gray-400 hover:text-gray-700 transition-colors">
           <X size={15} />
         </button>
         <button onClick={handleSave} className="p-1.5 rounded text-primary hover:bg-primary/10 transition-colors">
@@ -98,7 +99,7 @@ function AccountTab() {
     <div className="space-y-4">
       {/* 계정 정보 */}
       <div className="card">
-        <h3 className="font-semibold text-white mb-4">계정 정보</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">계정 정보</h3>
         <div className="space-y-4">
           <EditableField
             label="닉네임"
@@ -107,7 +108,7 @@ function AccountTab() {
           />
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">아이디</p>
-            <p className="text-sm text-gray-400">{user?.username}</p>
+            <p className="text-sm text-gray-700">{user?.username}</p>
           </div>
           <EditableField
             label="이메일"
@@ -130,9 +131,9 @@ function AccountTab() {
             {isPassVerified
               ? <ShieldCheck size={20} className="text-green-400" />
               : <ShieldOff size={20} className="text-gray-500" />}
-            <h3 className="font-semibold text-white">PASS 본인인증</h3>
+            <h3 className="font-semibold text-gray-900">PASS 본인인증</h3>
           </div>
-          <span className={`badge ${isPassVerified ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
+          <span className={`badge ${isPassVerified ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
             {isPassVerified ? '인증 완료' : '미인증'}
           </span>
         </div>
@@ -141,25 +142,25 @@ function AccountTab() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500">인증 이름</p>
-              <p className="text-white font-semibold">{passName}</p>
+              <p className="text-gray-900 font-semibold">{passName}</p>
             </div>
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500">인증 전화번호</p>
-              <p className="text-sm text-gray-300 font-mono">{maskPhone(passPhone)}</p>
+              <p className="text-sm text-gray-700 font-mono">{maskPhone(passPhone)}</p>
             </div>
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500">인증일시</p>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-600">
                 {passVerifiedAt ? new Date(passVerifiedAt).toLocaleDateString('ko-KR') : '—'}
               </p>
             </div>
             <div className="pt-2 border-t border-surface-border">
-              <p className="text-xs text-gray-600 mb-2">
+              <p className="text-xs text-gray-400 mb-2">
                 인증 해제 시 구매·판매·리뷰 기능이 차단됩니다.
               </p>
               <button
                 onClick={revokePass}
-                className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                className="text-sm text-red-500 hover:text-red-600 transition-colors"
               >
                 인증 해제
               </button>
@@ -183,8 +184,25 @@ function AccountTab() {
   )
 }
 
+const VALID_TABS = ['account', 'wallet', 'purchases', 'sales', 'wishlist', 'cart']
+
 export default function MyPage() {
-  const [activeTab, setActiveTab] = useState('account')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(
+    VALID_TABS.includes(tabParam) ? tabParam : 'account'
+  )
+
+  useEffect(() => {
+    if (tabParam && VALID_TABS.includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setSearchParams(tab === 'account' ? {} : { tab })
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -204,17 +222,17 @@ export default function MyPage() {
         {/* 사이드바 */}
         <aside className="w-48 shrink-0 border-r border-surface-border flex flex-col">
           <div className="px-5 py-5 border-b border-surface-border flex items-center justify-center">
-            <h1 className="text-xl font-bold text-white">마이페이지</h1>
+            <h1 className="text-xl font-bold text-gray-900">마이페이지</h1>
           </div>
           <div className="flex flex-col py-2">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => handleTabChange(id)}
               className={`flex items-center gap-3 px-6 py-4 text-base font-medium transition-colors w-full text-left ${
                 activeTab === id
-                  ? 'text-white bg-primary/15 border-r-2 border-primary'
-                  : 'text-gray-500 hover:text-white hover:bg-surface'
+                  ? 'text-primary bg-primary/8 border-r-2 border-primary'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-surface'
               }`}
             >
               <Icon size={17} />

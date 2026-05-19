@@ -50,7 +50,7 @@ export default function ChargeModal({ isOpen, onClose, onSuccess, currentBalance
         {currentBalance != null && (
           <div className="flex items-center justify-between bg-surface rounded-xl px-4 py-3">
             <p className="text-sm text-gray-500">현재 잔액</p>
-            <p className="text-white font-semibold">{currentBalance.toLocaleString()} Square</p>
+            <p className="text-gray-900 font-semibold">{currentBalance.toLocaleString()} Square</p>
           </div>
         )}
 
@@ -75,7 +75,7 @@ export default function ChargeModal({ isOpen, onClose, onSuccess, currentBalance
         <div className="bg-surface rounded-xl divide-y divide-surface-border">
           <div className="flex items-center justify-between px-4 py-3">
             <p className="text-sm text-gray-500">결제 금액</p>
-            <p className="text-white font-semibold">
+            <p className="text-gray-900 font-semibold">
               {square > 0 ? `₩${krw.toLocaleString()}` : '—'}
             </p>
           </div>

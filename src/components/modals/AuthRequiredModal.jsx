@@ -30,8 +30,8 @@ export default function AuthRequiredModal({ isOpen, onClose, action = 'purchase'
         </div>
 
         <div>
-          <p className="text-gray-300 mb-1">
-            <span className="text-white font-semibold">{ACTION_LABEL[action]}</span>를 위해
+          <p className="text-gray-600 mb-1">
+            <span className="text-gray-900 font-semibold">{ACTION_LABEL[action]}</span>를 위해
             본인인증이 필요합니다.
           </p>
           <p className="text-sm text-gray-500">
@@ -40,8 +40,8 @@ export default function AuthRequiredModal({ isOpen, onClose, action = 'purchase'
           </p>
         </div>
 
-        <div className="w-full bg-surface rounded-xl p-4 text-left text-sm text-gray-400 space-y-1.5">
-          <p className="font-medium text-gray-300 mb-2">인증 흐름</p>
+        <div className="w-full bg-surface rounded-xl p-4 text-left text-sm text-gray-500 space-y-1.5">
+          <p className="font-medium text-gray-700 mb-2">인증 흐름</p>
           <p>① [PASS 인증 시작] 버튼 클릭</p>
           <p>② 팝업에서 통신사 선택 (KT / SKT / LG U+)</p>
           <p>③ PASS 앱 또는 문자로 인증 완료</p>

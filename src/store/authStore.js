@@ -4,9 +4,12 @@ import { persist } from 'zustand/middleware'
 export const useAuthStore = create(
   persist(
     (set) => ({
+      _hasHydrated: false,
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
+
       // ── 로그인 상태 (아이디/비밀번호) ─────────────────────────────────
       isLoggedIn: false,
-      user: null, // { id, username, name, nickname, email }
+      user: null, // { id, username, name, nickname, email, role }
 
       setUser: (user) => set({ isLoggedIn: true, user }),
 
@@ -39,6 +42,11 @@ export const useAuthStore = create(
       updateUser: (patch) =>
         set((state) => ({ user: { ...state.user, ...patch } })),
     }),
-    { name: 'recode-auth' }
+    {
+      name: 'recode-auth',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    }
   )
 )

@@ -70,7 +70,7 @@ export default function Cart() {
             )}
 
             <Link to={`/products/${item.productId}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
-              <p className="text-white font-medium truncate">{item.productTitle}</p>
+              <p className="text-gray-900 font-medium truncate">{item.productTitle}</p>
               <p className="text-sm text-gray-500 mt-0.5">
                 ₩{item.priceKrw?.toLocaleString()}
                 <span className="mx-2">·</span>
@@ -92,8 +92,8 @@ export default function Cart() {
       {/* 합계 및 결제 */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-gray-400 text-sm">총 {items.length}개 상품</p>
-          <p className="text-white font-bold text-lg">₩{totalPrice.toLocaleString()}</p>
+          <p className="text-gray-500 text-sm">총 {items.length}개 상품</p>
+          <p className="text-gray-900 font-bold text-lg">₩{totalPrice.toLocaleString()}</p>
         </div>
         <button
           onClick={() => navigate('/checkout', { state: { items } })}

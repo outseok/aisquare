@@ -52,7 +52,7 @@ export default function SalesHistory() {
       <div className="grid grid-cols-2 gap-4">
         <div className="card text-center">
           <TrendingUp size={20} className="mx-auto text-primary mb-2" />
-          <p className="text-2xl font-bold text-white">{stats.totalSales.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-gray-900">{stats.totalSales.toLocaleString()}</p>
           <p className="text-sm text-gray-500">누적 판매 건수</p>
         </div>
         <div className="card text-center">
@@ -86,11 +86,10 @@ export default function SalesHistory() {
                 )}
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold truncate">{product.title}</p>
+                  <p className="text-gray-900 font-semibold truncate">{product.title}</p>
                   <div className="flex items-center gap-3 mt-1 text-sm text-gray-500 flex-wrap">
-                    <span>{product.priceRp?.toLocaleString() ?? product.price} RP</span>
-                    <span>판매 {product.salesCount}건</span>
-                    <span>수익 {(product.revenue ?? 0).toLocaleString()} RP</span>
+                    <span>₩{(product.priceKrw ?? product.priceRp ?? product.price)?.toLocaleString()}</span>
+                    <span>수익 {(product.revenue ?? 0).toLocaleString()} Square</span>
                   </div>
                 </div>
 

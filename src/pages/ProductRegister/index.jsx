@@ -35,7 +35,7 @@ function EditorToolbar({ editor }) {
       className={`p-2 rounded-lg transition-colors ${
         editor.isActive(title?.toLowerCase() ?? '')
           ? 'bg-primary text-white'
-          : 'text-gray-400 hover:bg-surface hover:text-white'
+          : 'text-gray-500 hover:bg-surface hover:text-gray-900'
       }`}
     >
       {icon}
@@ -63,7 +63,7 @@ function EditorToolbar({ editor }) {
           const url = window.prompt('이미지 URL 입력')
           if (url) editor.chain().focus().setImage({ src: url }).run()
         }}
-        className="p-2 rounded-lg text-gray-400 hover:bg-surface hover:text-white transition-colors"
+        className="p-2 rounded-lg text-gray-500 hover:bg-surface hover:text-gray-900 transition-colors"
         title="이미지"
       >
         <ImageIcon size={16} />
@@ -74,7 +74,7 @@ function EditorToolbar({ editor }) {
           const url = window.prompt('링크 URL 입력')
           if (url) editor.chain().focus().setLink({ href: url }).run()
         }}
-        className="p-2 rounded-lg text-gray-400 hover:bg-surface hover:text-white transition-colors"
+        className="p-2 rounded-lg text-gray-500 hover:bg-surface hover:text-gray-900 transition-colors"
         title="링크"
       >
         <LinkIcon size={16} />
@@ -116,7 +116,7 @@ function FileDropzone({ file, onDrop, onRemove }) {
         <div className="flex items-center gap-4 border border-surface-border rounded-xl p-4 bg-surface">
           <span className="text-3xl">{fileIcon(file.name)}</span>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">{file.name}</p>
+            <p className="text-gray-900 font-medium truncate">{file.name}</p>
             <p className="text-sm text-gray-500">
               {(file.size / 1024 / 1024).toFixed(2)} MB
             </p>
@@ -212,7 +212,7 @@ export default function ProductRegister() {
   if (!isPassVerified) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <p className="text-xl font-bold text-white mb-2">PASS 본인인증이 필요합니다</p>
+        <p className="text-xl font-bold text-gray-900 mb-2">PASS 본인인증이 필요합니다</p>
         <p className="text-gray-500">GNB에서 PASS 인증을 먼저 진행한 후 상품을 등록해주세요.</p>
       </div>
     )
@@ -222,7 +222,7 @@ export default function ProductRegister() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
         <PenSquare size={24} className="text-primary" />
-        <h1 className="text-2xl font-bold text-white">상품 등록</h1>
+        <h1 className="text-2xl font-bold text-gray-900">상품 등록</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -244,7 +244,7 @@ export default function ProductRegister() {
           <label className="label">상품 설명 *</label>
           <div className="border border-surface-border rounded-xl overflow-hidden bg-surface">
             <EditorToolbar editor={editor} />
-            <EditorContent editor={editor} className="min-h-[240px] text-white" />
+            <EditorContent editor={editor} className="min-h-[240px] text-gray-900" />
           </div>
         </div>
 

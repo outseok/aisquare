@@ -66,7 +66,7 @@ export default function Wishlist() {
           )}
 
           <Link to={`/products/${item.productId}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
-            <p className="text-white font-medium truncate">{item.productTitle}</p>
+            <p className="text-gray-900 font-medium truncate">{item.productTitle}</p>
             <p className="text-sm text-gray-500 mt-0.5">
               ₩{item.priceKrw?.toLocaleString()}
               <span className="mx-2">·</span>

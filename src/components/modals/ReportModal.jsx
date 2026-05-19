@@ -65,7 +65,7 @@ export default function ReportModal({ isOpen, onClose, order }) {
       <div className="space-y-5">
         <div>
           <p className="text-sm text-gray-400 mb-1">
-            상품: <span className="text-white">{order?.productTitle}</span>
+            상품: <span className="text-gray-900 font-medium">{order?.productTitle}</span>
           </p>
           <p className="text-xs text-gray-500">
             신고 접수 즉시 정산이 보류되고 관리자가 슬랙으로 알림을 받습니다.

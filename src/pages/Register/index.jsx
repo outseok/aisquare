@@ -53,14 +53,14 @@ export default function Register() {
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white">
-            <span className="text-primary">Recode</span> AI
+          <h1 className="text-2xl font-bold text-gray-900">
+            <span className="text-primary">AI</span> Square
           </h1>
           <p className="text-gray-500 text-sm mt-1">AI 족보 마켓플레이스</p>
         </div>
 
         <div className="card">
-          <h2 className="text-lg font-semibold text-white mb-5">회원가입</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-5">회원가입</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
