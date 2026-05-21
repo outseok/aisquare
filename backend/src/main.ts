@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+// .env 자동 로드 — `npm run start:dev` 등 어떤 방식으로 띄워도 DATABASE_URL/TOSS_*/FABRIC_* 인식
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
