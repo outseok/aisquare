@@ -10,8 +10,18 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useStaticAssets(join(__dirname, '..', 'test'), { prefix: '/test' });
 
+  // CORS — localhost 어떤 포트든 허용 + .env의 FRONTEND_URL 추가 허용
+  // (정적 프론트(8000), Vite(5173), Next(3000 등) 모두 커버)
+  const allowList = (process.env.FRONTEND_URL || 'http://localhost:8000,http://localhost:5173,http://localhost:3000,http://127.0.0.1:8000,http://127.0.0.1:5173')
+    .split(',').map(s => s.trim()).filter(Boolean);
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // 같은 머신 fetch (origin 없음) 또는 화이트리스트 매칭, 또는 localhost:* 전부 허용
+      if (!origin) return callback(null, true);
+      if (allowList.includes(origin)) return callback(null, true);
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+      callback(new Error('CORS: origin not allowed → ' + origin), false);
+    },
     credentials: true,
   });
 
