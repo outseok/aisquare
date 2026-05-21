@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>상품 상세 — AISquare</title>
-    <link rel="stylesheet" href="./styles.css?v=1779351319" />
+    <link rel="stylesheet" href="./styles.css?v=1779353750" />
     <script>
       (function () {
         try {
@@ -149,8 +149,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779351319"></script>
-    <script src="./app.js?v=1779351319"></script>
+    <script src="./api.js?v=1779353750"></script>
+    <script src="./app.js?v=1779353750"></script>
     <script>
       (async function() {
         var api = window.AISquareAPI;
@@ -223,7 +223,7 @@
             '<div class="pd-block" style="background:#fafbfc;border:1px dashed #d4dae4;border-radius:14px;padding:24px 28px;text-align:center;">',
               '<p style="margin:0 0 6px;color:#1f2a38;font-size:14.5px;font-weight:700;">이 판매자의 리뷰는 판매자 페이지에서 모아 보실 수 있어요.</p>',
               '<p style="margin:0 0 14px;color:#677181;font-size:12.5px;line-height:1.6;">AISquare는 1:1 디지털 자산 거래 특성상 상품별 리뷰가 아닌 판매자 단위로 신뢰도와 리뷰를 관리합니다.</p>',
-              '<a href="./seller.html?u=' + encodeURIComponent(product.sellerUsername || '') + '" style="display:inline-block;padding:10px 22px;background:#050505;color:#fff;border-radius:8px;font-weight:800;font-size:13px;text-decoration:none;">' + escapeHtml(product.sellerName || product.sellerUsername || '판매자') + ' 페이지에서 리뷰 보기 →</a>',
+              '<a href="./seller.html?u=' + encodeURIComponent(product.sellerUsername || '') + '" style="display:inline-block;padding:10px 22px;background:#050505;color:#fff;border-radius:8px;font-weight:800;font-size:13px;text-decoration:none;">' + String(product.sellerName || product.sellerUsername || '판매자').replace(/[&<>"\047]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + ' 페이지에서 리뷰 보기 →</a>',
             '</div>',
           '</div>'
         ].join('');
