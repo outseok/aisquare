@@ -368,7 +368,8 @@ async function initMarket(showToast, api) {
   }
 
   async function render() {
-    const params = { fileType: state.fileType, q: state.q, sort: state.sort };
+    // BE는 ?search= 받음. q 라는 옛 이름으로 보내고 있어서 항상 무시되던 버그 fix.
+    const params = { fileType: state.fileType, search: state.q, sort: state.sort };
     let { items } = await api.products.list(params);
     if (state.category && state.category !== "all") {
       items = items.filter(p =>

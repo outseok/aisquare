@@ -49,7 +49,19 @@ export class ProductsService {
       isVisible: true,
       status: 'ON_SALE',
       ...(fileType && { fileType }),
-      ...(search && { title: { contains: search } }),
+      ...(search && {
+        OR: [
+          { title: { contains: search } },
+          { description: { contains: search } },
+          // tags 는 JSON 컬럼 — MySQL의 JSON LIKE는 따옴표 포함 매칭이라 search 문구를 JSON 부분 일치로
+          { tags: { string_contains: search } as any },
+          { seller: { is: { OR: [
+            { name: { contains: search } },
+            { username: { contains: search } },
+            { nickname: { contains: search } },
+          ] } } },
+        ],
+      }),
     };
 
     let orderBy: Prisma.ProductOrderByWithRelationInput;
