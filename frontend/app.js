@@ -528,10 +528,6 @@ async function initMyPage(showToast, api) {
     let u;
     try { u = await api.user.getMe(); }
     catch (e) { console.warn('[mypage] getMe failed, falling back to local user:', e.message); u = api.getCurrentUser(); }
-    const [sq, pt] = await Promise.all([
-      api.square.getBalance().catch(() => ({ balance: 0 })),
-      api.point.getBalance().catch(() => ({ balance: 0 })),
-    ]);
     const av = document.getElementById("mpAv");
     if (av) {
       const init = (u?.nickname || u?.name || u?.username || "U").trim().slice(0, 1).toUpperCase();
@@ -547,8 +543,6 @@ async function initMyPage(showToast, api) {
       ps.className = "pass " + (u?.passVerified ? "on" : "off");
       ps.textContent = u?.passVerified ? "● PASS 인증 완료" : "○ PASS 미인증";
     }
-    const sqEl = document.getElementById("mpSq"); if (sqEl) sqEl.innerHTML = `${(sq.balance ?? 0).toLocaleString()}<em>SQ</em>`;
-    const ptEl = document.getElementById("mpPt"); if (ptEl) ptEl.innerHTML = `${(pt.balance ?? 0).toLocaleString()}<em>P</em>`;
   } catch (e) { /* ignore */ }
 
   const main = document.querySelector(".mypage-main");
@@ -627,6 +621,10 @@ async function renderAccount(root, api, showToast) {
         <span class="v">${esc(user?.passName || user?.name || "-")}</span><span></span>
       </div>
       <div class="kv-row">
+        <span class="k">전화번호</span>
+        <span class="v mono">${user?.phone ? esc(String(user.phone).replace(/\D/g, "").replace(/^(\d{3})(\d{3,4})(\d{4})$/, "$1-$2-$3")) : "-"}</span><span></span>
+      </div>
+      <div class="kv-row">
         <span class="k">인증 일시</span>
         <span class="v muted">${user?.passVerifiedAt ? fmtDate(user.passVerifiedAt) : "-"}</span><span></span>
       </div>
@@ -653,17 +651,23 @@ async function renderAccount(root, api, showToast) {
 
   document.getElementById("passBtn").addEventListener("click", async () => {
     if (passVerified) {
-      // Unverify is instant (dev only)
+      if (!confirm("PASS 본인인증을 해제하시겠습니까?\n해제 후에는 구매·판매·리뷰가 제한됩니다.")) return;
+      const btn = document.getElementById("passBtn");
+      btn.disabled = true;
       try {
-        const u = api.getCurrentUser();
-        if (u) { u.passVerified = false; api.setCurrentUser(u); }
+        await api.auth.revokePass();
         showToast("PASS 인증이 해제되었습니다.");
+        try { await api.user.getMe(); } catch {}
         renderAccount(root, api, showToast);
-      } catch (e) { showToast(e.message || 'PASS 해제 실패'); }
+      } catch (e) {
+        btn.disabled = false;
+        showToast(e.message || 'PASS 해제 실패');
+      }
       return;
     }
-    // Open mock PASS phone-verification modal
-    openPassModal(user, api, showToast, async () => {
+    // Direct PortOne PASS flow — no custom modal wrapper
+    startPassVerification(user, api, showToast, async () => {
+      try { await api.user.getMe(); } catch {}
       renderAccount(root, api, showToast);
       const ps = document.getElementById("mpPass");
       const u2 = api.getCurrentUser();
@@ -673,56 +677,44 @@ async function renderAccount(root, api, showToast) {
       }
     });
   });
-}
 
-// ===== PASS phone-verification modal (mock-realistic) =====
-// ===== PASS phone-verification (REAL PortOne SDK) =====
-// Loads https://cdn.iamport.kr/v1/iamport.js, inits with merchant code from BE,
-// opens the real PortOne PASS popup, then forwards imp_uid to BE for server-side
-// verification against the iamport REST API.
-function openPassModal(user, api, showToast, onDone) {
-  document.querySelectorAll('.pass-modal-bg').forEach(n => n.remove());
-
-  const phone = user?.phone || '';
-  const masked = phone.length >= 8 ? (phone.slice(0,3) + '-****-' + phone.slice(-4)) : (phone || '미등록');
-  const wrap = document.createElement('div');
-  wrap.className = 'pass-modal-bg';
-  wrap.innerHTML = `
-    <div class="pass-modal">
-      <div class="pm-head">
-        <div class="pm-logo">PASS</div>
-        <button type="button" class="pm-close" aria-label="닫기">×</button>
+  // 회원 탈퇴 섹션
+  const dangerSection = document.createElement('div');
+  dangerSection.innerHTML = `
+    <h2 style="margin-top:48px;color:#c0392b;">회원 탈퇴</h2>
+    <p class="sub">탈퇴 시 계정과 등록한 상품·리뷰·찜·장바구니·포인트 내역이 모두 영구 삭제되며 복구할 수 없습니다. 탈퇴 후에는 동일한 이메일·아이디로 즉시 재가입할 수 있습니다.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 20px;margin-top:8px;border:1px solid #f3d7d3;background:#fef6f5;border-radius:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:#c0392b;">계정 삭제</div>
+        <div style="font-size:12.5px;color:#9b9b9b;font-weight:600;margin-top:3px;">이 작업은 되돌릴 수 없습니다.</div>
       </div>
-      <div class="pm-body" id="pmBody">
-        <h3>휴대폰 본인인증</h3>
-        <p class="pm-sub">PortOne(아임포트) 본인확인 서비스를 통해 진행됩니다. 통신사 PASS 앱 또는 문자 인증 화면이 열립니다.</p>
-        <div class="pm-row">
-          <span class="pm-label">이름</span>
-          <input class="pm-input" value="${esc(user?.name || '')}" readonly />
-        </div>
-        <div class="pm-row">
-          <span class="pm-label">휴대폰</span>
-          <input class="pm-input mono" value="${esc(masked)}" readonly />
-        </div>
-        <p class="pm-sub" style="margin-top:18px;font-size:12.5px;">※ 가입 시 입력한 번호와 본인인증 결과의 번호가 일치해야 인증이 완료됩니다.</p>
-        <label class="pm-agree">
-          <input type="checkbox" id="pmAgree" />
-          <span>본인확인 서비스 이용약관 및 개인정보 수집·이용에 모두 동의합니다.</span>
-        </label>
-        <button type="button" class="pm-primary" id="pmStartBtn" disabled>본인인증 시작</button>
-      </div>
+      <button class="btn-danger" id="deleteAccountBtn" type="button">${ICON.trash || '🗑'} 회원 탈퇴</button>
     </div>
   `;
-  document.body.appendChild(wrap);
+  root.appendChild(dangerSection);
+  document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
+    const uname = user?.username || '';
+    const input = prompt('정말로 탈퇴하시겠습니까?\n계정과 모든 데이터가 영구 삭제됩니다.\n\n확인을 위해 본인 아이디(' + uname + ')를 입력해 주세요:');
+    if (input === null) return;
+    if (input.trim() !== uname) { showToast("아이디가 일치하지 않습니다."); return; }
+    const btn = document.getElementById("deleteAccountBtn");
+    btn.disabled = true; btn.textContent = "탈퇴 처리 중...";
+    try {
+      await api.auth.deleteAccount();
+      showToast("탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.");
+      setTimeout(() => { location.href = "./index.html"; }, 1200);
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "회원 탈퇴";
+      showToast(e.message || "탈퇴에 실패했습니다.");
+    }
+  });
+}
 
-  const close = () => wrap.remove();
-  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
-  wrap.querySelector('.pm-close').addEventListener('click', close);
-
-  const agree = wrap.querySelector('#pmAgree');
-  const startBtn = wrap.querySelector('#pmStartBtn');
-  agree.addEventListener('change', () => { startBtn.disabled = !agree.checked; });
-
+// ===== PASS phone-verification (REAL PortOne SDK — no custom wrapper) =====
+// Loads https://cdn.iamport.kr/v1/iamport.js, fetches merchant code from BE,
+// then opens the real iamport certification popup (carrier PASS / NICE / inicis).
+// The BE verifies the imp_uid via the iamport REST API.
+function startPassVerification(user, api, showToast, onDone) {
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       if ([...document.scripts].some(s => s.src === src)) return resolve();
@@ -732,15 +724,12 @@ function openPassModal(user, api, showToast, onDone) {
     });
   }
 
-  startBtn.addEventListener('click', async () => {
-    startBtn.disabled = true; startBtn.textContent = '인증창 여는 중...';
+  (async () => {
+    showToast('본인인증 창을 여는 중...');
     try {
-      // 1. Load PortOne v1 SDK
       await loadScript('https://cdn.iamport.kr/v1/iamport.js');
-      // 2. Get merchant code from BE
       const cfg = await api.auth.impConfig();
       if (!cfg.impCode) throw new Error('IMP_CODE 미설정 — BE .env 확인');
-      // 3. Init + request certification (REAL PASS popup)
       IMP.init(cfg.impCode);
       const merchantUid = 'mid_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
       IMP.certification({
@@ -752,54 +741,63 @@ function openPassModal(user, api, showToast, onDone) {
       }, async (rsp) => {
         if (!rsp.success) {
           showToast('본인인증 실패: ' + (rsp.error_msg || rsp.error_code || '취소됨'));
-          startBtn.disabled = false; startBtn.textContent = '본인인증 시작';
           return;
         }
-        // 4. Send imp_uid to BE — server verifies with iamport REST
         try {
           await api.auth.passVerify(rsp.imp_uid, merchantUid);
-          const body = wrap.querySelector('#pmBody');
-          body.innerHTML = `
-            <div style="text-align:center;padding:24px 0;">
-              <div class="pm-success">✓</div>
-              <h3 style="margin:12px 0 6px;">본인인증 완료</h3>
-              <p class="pm-sub" style="margin-bottom:18px;">${esc(user?.name || '')} 님, 인증이 완료되었습니다.</p>
-              <button type="button" class="pm-primary" id="pmDoneBtn">확인</button>
-            </div>
-          `;
-          body.querySelector('#pmDoneBtn').addEventListener('click', () => { close(); onDone && onDone(); });
           showToast('PASS 본인인증이 완료되었습니다.');
+          onDone && onDone();
         } catch (e) {
           showToast(e.message || 'BE 검증 실패');
-          startBtn.disabled = false; startBtn.textContent = '본인인증 시작';
         }
       });
     } catch (e) {
       console.error('PASS start failed:', e);
       showToast(e.message || '본인인증을 시작할 수 없습니다.');
-      startBtn.disabled = false; startBtn.textContent = '본인인증 시작';
     }
-  });
+  })();
 }
 
 async function renderWallet(root, api, showToast) {
+  window.__aisqRepaintWallet = () => { try { paint(); } catch {} };
+  // ── Toss 충전 return 처리 (successUrl/failUrl로 돌아온 경우 한 번 실행) ──
+  const _qs = new URLSearchParams(location.search);
+  const _chargeFlag = _qs.get("charge");
+  if (_chargeFlag === "success") {
+    const chargeId = _qs.get("id");
+    const paymentKey = _qs.get("paymentKey");
+    const orderId = _qs.get("orderId");
+    const amount = parseInt(_qs.get("amount"), 10);
+    history.replaceState({}, "", "./mypage.html?tab=wallet");
+    if (chargeId && paymentKey && orderId && amount) {
+      try {
+        const API_BASE = window.AISquareAPI.API_BASE;
+        const jwt = window.AISquareAPI.getJwt();
+        const res = await fetch(API_BASE + `/wallet/charge/${encodeURIComponent(chargeId)}/confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + jwt },
+          body: JSON.stringify({ paymentKey, amount }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "결제 확정 실패");
+        showToast("Square 충전이 완료되었습니다.");
+      } catch (e) {
+        console.error("charge confirm failed:", e);
+        showToast(e.message || "결제 확정 실패");
+      }
+    }
+  } else if (_chargeFlag === "fail") {
+    history.replaceState({}, "", "./mypage.html?tab=wallet");
+    showToast("결제가 취소되었습니다.");
+  }
+
   let active = "square";
   async function paint() {
     const isSquare = active === "square";
-    let paidBal = { balance: 0 }, activityBal = { balance: 0 };
     const [bal, hist] = await Promise.all([
       isSquare ? api.square.getBalance() : api.point.getBalance(),
       isSquare ? api.square.getHistory({ limit: 20 }) : api.point.getHistory({ limit: 20 }),
     ]);
-    if (!isSquare) {
-      // Point Wallet: 추가로 PAID/ACTIVITY 분리 잔액 조회
-      try {
-        [paidBal, activityBal] = await Promise.all([
-          fetch(window.AISquareAPI.API_BASE + '/points/balance/paid', { headers: { Authorization: 'Bearer ' + window.AISquareAPI.getJwt() } }).then(r => r.json()).catch(() => ({ balance: 0 })),
-          fetch(window.AISquareAPI.API_BASE + '/points/balance/activity', { headers: { Authorization: 'Bearer ' + window.AISquareAPI.getJwt() } }).then(r => r.json()).catch(() => ({ balance: 0 })),
-        ]);
-      } catch (e) {}
-    }
     root.innerHTML = `
       <h2>지갑 관리</h2>
       <p class="sub">Square 지갑은 구매·판매 결제용, Point 지갑은 할인 적립용입니다.</p>
@@ -821,25 +819,10 @@ async function renderWallet(root, api, showToast) {
         </div>
       </div>
 
-      ${!isSquare ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 20px;">
-          <div style="background:#eef1ff;border-radius:12px;padding:18px 22px;">
-            <div style="color:#1F3AE0;font-weight:800;font-size:12.5px;letter-spacing:0.04em;">💳 PAID (결제 포인트)</div>
-            <div style="font-size:24px;font-weight:900;color:#1f2a38;margin:8px 0 4px;">${n(paidBal.balance || 0)}<em style="font-style:normal;font-size:13px;font-weight:700;color:#677181;"> Point</em></div>
-            <div style="font-size:12px;color:#677181;line-height:1.5;">충전·캐시백으로 적립<br>→ <b style="color:#1F3AE0">네이버페이 전환 가능</b></div>
-          </div>
-          <div style="background:#f0f4f8;border-radius:12px;padding:18px 22px;">
-            <div style="color:#677181;font-weight:800;font-size:12.5px;letter-spacing:0.04em;">⭐ ACTIVITY (활동 포인트)</div>
-            <div style="font-size:24px;font-weight:900;color:#1f2a38;margin:8px 0 4px;">${n(activityBal.balance || 0)}<em style="font-style:normal;font-size:13px;font-weight:700;color:#677181;"> Point</em></div>
-            <div style="font-size:12px;color:#677181;line-height:1.5;">리뷰·이벤트로 적립<br>→ 사이트 내 결제 할인만</div>
-          </div>
-        </div>
-      ` : ''}
-
       <div class="wallet-info">
         ${isSquare
-          ? `• 결제 시 <b>1 Square = 1원</b><br>• 충전 시 <b>1,000 Square = 1,100원</b> (수수료 10% 포함)<br>• 충전 금액의 <b>0.1%</b>가 Point Wallet에 자동 적립됩니다`
-          : `• 충전·구매 캐시백 → <b>PAID 포인트</b> (네이버페이 전환 가능)<br>• 리뷰 작성·이벤트 → <b>ACTIVITY 포인트</b> (사이트 내 결제 할인만)<br>• Point는 출금 불가 · 1 Point = 1원 할인`}
+          ? `• 결제 시 <b>1 Square = 1원</b><br>• 충전 시 <b>1,000 Square = 1,100원</b> (수수료 10% 포함)<br>• 거래 시 판매자 5% / 구매자 5% 부담 (양쪽 <b>2% Square 캐시백</b> 적립)`
+          : `• 충전·구매 캐시백(NaverPay 전환용) → <b>PAID 포인트</b><br>• 리뷰 작성·이벤트 → <b>ACTIVITY 포인트</b> (사이트 내 결제 할인만)<br>• Point는 출금 불가 · 1 Point = 1원 할인<br>• 거래 캐시백은 Square로 적립됩니다`}
       </div>
 
       <h3 style="margin:0 0 12px;font-size:15px;font-weight:800;color:#677181">${isSquare ? "거래 내역" : "적립 내역"}</h3>
@@ -856,15 +839,7 @@ async function renderWallet(root, api, showToast) {
 
     root.querySelectorAll(".wallet-tab").forEach(b => b.addEventListener("click", () => { active = b.dataset.w; paint(); }));
     root.querySelector("#refreshBtn")?.addEventListener("click", () => { showToast("새로고침했습니다."); paint(); });
-    root.querySelector("#chargeBtn")?.addEventListener("click", async () => {
-      const raw = prompt("충전할 Square 금액을 입력하세요 (최소 5,000, 1,000 단위)\n예: 10000", "10000");
-      if (!raw) return;
-      const v = Math.floor(Number(raw));
-      if (!v || v < 5000 || v % 1000 !== 0) { showToast("최소 5,000 Square · 1,000 단위로 입력해주세요."); return; }
-      await api.square.charge(v);
-      showToast(`${n(v)} Square 충전 완료 · ₩${n(Math.round(v * 1.1))} 결제`);
-      paint();
-    });
+    root.querySelector("#chargeBtn")?.addEventListener("click", () => openChargeModal(api, showToast));
     root.querySelector("#naverExBtn")?.addEventListener("click", async () => {
       const me = api.getCurrentUser() || {};
       if (!me.phoneVerified && !me.passVerified) {
@@ -888,6 +863,156 @@ async function renderWallet(root, api, showToast) {
     });
   }
   paint();
+}
+
+// ── Square 충전 모달 (Toss SDK 흐름) ──
+async function openChargeModal(api, showToast) {
+  const me = api.getCurrentUser() || {};
+  if (!me.phoneVerified && !me.passVerified) {
+    showToast("PASS 본인인증이 필요합니다.");
+    setTimeout(() => location.hash = "account", 800);
+    return;
+  }
+  document.querySelectorAll(".charge-modal-bg").forEach(n => n.remove());
+
+  const PRESETS = [5000, 10000, 30000, 50000, 100000, 300000];
+  let amount = 10000;
+
+  const wrap = document.createElement("div");
+  wrap.className = "charge-modal-bg";
+  wrap.style.cssText = "position:fixed;inset:0;background:rgba(11,13,18,0.55);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(2px);";
+  wrap.innerHTML = `
+    <div class="charge-modal" style="background:#fff;width:min(440px,calc(100vw - 32px));border-radius:16px;padding:28px 28px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 style="margin:0;font-size:18px;font-weight:900;color:#0b0d12;">Square 충전</h3>
+        <button type="button" id="cmClose" aria-label="닫기" style="background:none;border:0;font-size:22px;color:#677181;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <p style="margin:0 0 18px;font-size:12.5px;color:#677181;">1,100원당 1,000 Square (수수료 10%) · 충전 금액의 0.1%가 Point로 적립됩니다.</p>
+
+      <div style="font-size:12px;font-weight:800;color:#677181;letter-spacing:0.04em;margin-bottom:8px;">충전 금액 (Square)</div>
+      <div id="cmPresets" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+        ${PRESETS.map(p => `<button type="button" class="cm-preset" data-v="${p}" style="padding:10px 6px;border:1px solid #d4dae4;background:#fff;border-radius:10px;font-weight:700;font-size:13px;color:#1f2a38;cursor:pointer;">${p.toLocaleString()}</button>`).join("")}
+      </div>
+
+      <label style="display:block;margin-bottom:18px;">
+        <span style="display:block;font-size:12px;font-weight:800;color:#677181;letter-spacing:0.04em;margin-bottom:6px;">직접 입력</span>
+        <input id="cmAmount" type="number" min="5000" step="1000" value="${amount}" inputmode="numeric" style="width:100%;padding:11px 12px;border:1px solid #d4dae4;border-radius:10px;font-size:15px;font-weight:700;color:#1f2a38;outline:none;" />
+        <span id="cmHint" style="display:block;margin-top:6px;font-size:11.5px;color:#677181;">최소 5,000 · 1,000 단위</span>
+      </label>
+
+      <div style="background:#f5f7fb;border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:#677181;margin-bottom:4px;"><span>받는 Square</span><b id="cmSq" style="color:#0b0d12;font-weight:800;">10,000</b></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:#677181;margin-bottom:4px;"><span>적립 Point (0.1%)</span><b id="cmBonus" style="color:#1F3AE0;font-weight:800;">+11</b></div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;color:#0b0d12;margin-top:8px;padding-top:8px;border-top:1px solid #e5e9ef;"><span style="font-weight:700;">결제 금액</span><b id="cmKrw" style="font-weight:900;">₩11,000</b></div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="cmCancel" style="flex:1;padding:13px;border:1px solid #d4dae4;background:#fff;border-radius:10px;font-weight:800;font-size:14px;color:#1f2a38;cursor:pointer;">취소</button>
+        <button type="button" id="cmPay" style="flex:2;padding:13px;border:0;background:#0b0d12;border-radius:10px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;">₩<span id="cmPayKrw">11,000</span> 결제하기</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+
+  const close = () => wrap.remove();
+  wrap.addEventListener("click", e => { if (e.target === wrap) close(); });
+  wrap.querySelector("#cmClose").addEventListener("click", close);
+  wrap.querySelector("#cmCancel").addEventListener("click", close);
+
+  const input = wrap.querySelector("#cmAmount");
+  const hint = wrap.querySelector("#cmHint");
+  const sq = wrap.querySelector("#cmSq");
+  const bonus = wrap.querySelector("#cmBonus");
+  const krw = wrap.querySelector("#cmKrw");
+  const payKrw = wrap.querySelector("#cmPayKrw");
+  const payBtn = wrap.querySelector("#cmPay");
+
+  function recalc() {
+    const v = Math.floor(Number(input.value));
+    const valid = v >= 5000 && v % 1000 === 0;
+    const k = Math.round(v * 1.1);
+    sq.textContent = (valid ? v : 0).toLocaleString();
+    krw.textContent = "₩" + (valid ? k : 0).toLocaleString();
+    payKrw.textContent = (valid ? k : 0).toLocaleString();
+    bonus.textContent = "+" + (valid ? Math.floor(k * 0.001) : 0).toLocaleString();
+    hint.textContent = valid ? `≈ ₩${k.toLocaleString()} 결제` : "최소 5,000 · 1,000 단위";
+    hint.style.color = valid ? "#1F8A5B" : "#c8331f";
+    payBtn.disabled = !valid;
+    payBtn.style.opacity = valid ? "1" : "0.5";
+    payBtn.style.cursor = valid ? "pointer" : "not-allowed";
+    amount = valid ? v : 0;
+    wrap.querySelectorAll(".cm-preset").forEach(b => {
+      const on = Number(b.dataset.v) === v;
+      b.style.background = on ? "#0b0d12" : "#fff";
+      b.style.color = on ? "#fff" : "#1f2a38";
+      b.style.borderColor = on ? "#0b0d12" : "#d4dae4";
+    });
+  }
+  wrap.querySelectorAll(".cm-preset").forEach(b => {
+    b.addEventListener("click", () => { input.value = b.dataset.v; recalc(); });
+  });
+  input.addEventListener("input", recalc);
+  recalc();
+
+  payBtn.addEventListener("click", async () => {
+    if (!amount) return;
+    const amountKrw = Math.round(amount * 1.1);
+    const API_BASE = window.AISquareAPI.API_BASE;
+    const jwt = window.AISquareAPI.getJwt();
+    payBtn.disabled = true; payBtn.textContent = "처리 중...";
+    try {
+      // 1) prepareCharge — BE에 PENDING walletCharge 레코드 생성
+      const prepRes = await fetch(API_BASE + "/wallet/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + jwt },
+        body: JSON.stringify({ amountKrw }),
+      });
+      const prep = await prepRes.json();
+      if (!prepRes.ok) throw new Error(prep.message || "충전 준비 실패");
+
+      // 2) Toss 설정
+      const cfg = await api.payments.tossConfig();
+
+      // 3) devBypass — 결제창 우회 (개발용)
+      if (cfg.devBypass) {
+        const confRes = await fetch(API_BASE + `/wallet/charge/${prep.chargeId}/confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + jwt },
+          body: JSON.stringify({ paymentKey: "dev-fake-key", amount: prep.amountKrw }),
+        });
+        const conf = await confRes.json();
+        if (!confRes.ok) throw new Error(conf.message || "결제 확정 실패");
+        showToast(`${Number(prep.squareAmount).toLocaleString()} Square 충전 완료 (dev)`);
+        close();
+        if (typeof window.__aisqRepaintWallet === "function") window.__aisqRepaintWallet();
+        return;
+      }
+
+      // 4) Toss SDK 로드 + 결제창 호출 (성공 시 successUrl로 redirect)
+      if (!window.TossPayments) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "https://js.tosspayments.com/v1/payment";
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      const tossPayments = TossPayments(cfg.clientKey);
+      tossPayments.requestPayment("카드", {
+        amount: prep.amountKrw,
+        orderId: prep.tossOrderId,
+        orderName: `Square ${prep.squareAmount.toLocaleString()} 충전`,
+        customerName: me.nickname || me.name || "구매자",
+        successUrl: location.origin + "/mypage.html?tab=wallet&charge=success&id=" + encodeURIComponent(prep.chargeId),
+        failUrl:    location.origin + "/mypage.html?tab=wallet&charge=fail",
+      });
+    } catch (e) {
+      console.error("Square charge failed:", e);
+      showToast(e.message || "충전 실패");
+      payBtn.disabled = false;
+      payBtn.textContent = "₩" + payKrw.textContent + " 결제하기";
+    }
+  });
 }
 
 async function renderOrders(root, api, showToast, kind) {
@@ -1148,5 +1273,69 @@ async function renderCart(root, api, showToast) {
   root.querySelectorAll("[data-act=remove]").forEach(b => b.addEventListener("click", async () => {
     await api.cart.remove(b.dataset.id); showToast("삭제했습니다."); renderCart(root, api, showToast);
   }));
-  document.getElementById("checkoutBtn")?.addEventListener("click", () => showToast("결제 모듈은 준비 중입니다."));
+  document.getElementById("checkoutBtn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("checkoutBtn");
+
+    // PASS 본인인증 확인
+    let me;
+    try { me = await api.user.getMe(); } catch { me = api.getCurrentUser(); }
+    if (!me?.phoneVerified && !me?.passVerified) {
+      showToast("PASS 본인인증이 필요합니다.");
+      setTimeout(() => { location.href = "./mypage.html#account"; }, 900);
+      return;
+    }
+
+    // Square 잔액 확인
+    let squareBal = 0;
+    try { squareBal = (await api.square.getBalance())?.balance || 0; } catch {}
+
+    if (squareBal < total) {
+      const shortBy = total - squareBal;
+      const go = confirm("Square 잔액이 " + n(shortBy) + " Square 부족합니다.\n충전 페이지로 이동하시겠어요?");
+      if (go) {
+        location.href = "./mypage.html?tab=wallet&need=" + encodeURIComponent(shortBy);
+      }
+      return;
+    }
+
+    if (!confirm(items.length + "개 상품을 합계 " + n(total) + " Square로 구매하시겠어요?")) return;
+
+    btn.disabled = true;
+    const origLabel = btn.textContent;
+    btn.textContent = "결제 처리 중...";
+
+    const failed = [];
+    let bought = 0;
+    for (const p of items) {
+      try {
+        const order = await api.orders.create(p.id, "SQUARE", 0);
+        const txHash = "sq-client-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+        const res = await fetch(api.API_BASE + "/orders/" + order.id + "/pay/square", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + api.getJwt() },
+          body: JSON.stringify({ txHash }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.message || ("결제 실패: " + p.title));
+        }
+        bought++;
+        try { await api.cart.remove(p.id); } catch {}
+      } catch (e) {
+        failed.push({ title: p.title, msg: e.message });
+      }
+    }
+
+    if (failed.length === 0) {
+      showToast(bought + "개 상품 결제 완료!");
+      setTimeout(() => { location.href = "./mypage.html?tab=purchases"; }, 1000);
+    } else if (bought > 0) {
+      showToast(bought + "개 성공 · " + failed.length + "개 실패");
+      setTimeout(() => { renderCart(root, api, showToast); }, 1500);
+    } else {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+      showToast(failed[0]?.msg || "결제에 실패했습니다.");
+    }
+  });
 }

@@ -13,6 +13,8 @@ export enum FileType {
   JPG = 'JPG',
   PNG = 'PNG',
   MP4 = 'MP4',
+  TXT = 'TXT',
+  ZIP = 'ZIP',
 }
 
 export enum ProductStatus {

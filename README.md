@@ -177,12 +177,15 @@ rm -rf crypto-config channel-artifacts
 | **PAID** | 충전, 구매 캐시백 | 사이트 결제 + **NaverPay 전환 가능** |
 | **ACTIVITY** | 리뷰 작성, 이벤트 | 사이트 결제 할인 전용 (전환 불가) |
 
-### 수수료 정책 (기획서 4.4절)
+### 수수료 정책
 
-- 판매자 정산: **90%** (Square Wallet)
-- 플랫폼 수익: **6%** (adminLog 기록)
-- 구매자 캐시백: **2%** (ACTIVITY Point)
-- 판매자 캐시백: **2%** (ACTIVITY Point)
+- **표시 가격 = 가격(Amount)** — 예: 10,000 Square
+- **구매자 결제액(PayAmount) = 가격 × 1.05** — 예: 10,500 Square (가격 위에 5% 추가)
+- **판매자 정산 = 가격의 95%** — 예: 9,500 Square (가격에서 5% 차감)
+- **판매자 캐시백 = 가격의 2% (Square)** — 구매 확정 시 Square Wallet에 적립
+- **구매자 캐시백 = 가격의 2% (Square)** — 구매 확정 시 Square Wallet에 적립
+- **플랫폼 수익 = PayAmount − 정산 − 양쪽 캐시백 = 가격의 6%**
+- 양쪽 모두 5% 부담 / 양쪽 모두 2% Square 캐시백 적립 (adminLog 기록)
 
 ### 신뢰토큰 (0~100)
 

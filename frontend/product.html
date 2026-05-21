@@ -194,7 +194,7 @@
               '<div class="pd-price-box">',
                 '<span class="label">판매 가격</span>',
                 '<div class="price"><b>' + product.priceSquare.toLocaleString() + '</b><span>Square</span></div>',
-                '<div class="point-info">+ 구매 확정 시 ' + pointReward + ' Point 적립 (2%)</div>',
+                '<div class="point-info">결제 시 +5% 수수료 (₩' + Math.floor(product.priceSquare * 1.05).toLocaleString() + ' 결제) · 구매 확정 시 ' + pointReward + ' Square 캐시백 (2%)</div>',
               '</div>',
               '<div class="pd-seller" id="pdSeller" data-username="' + product.sellerUsername + '">',
                 '<div class="av">' + sellerInitial + '</div>',

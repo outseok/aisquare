@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { PrepareChargeDto } from './dto/prepare-charge.dto';
 import { ConfirmChargeDto } from './dto/confirm-charge.dto';
+import { InstantChargeDto } from './dto/instant-charge.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PassVerifiedGuard } from '../auth/pass-verified.guard';
 
@@ -20,6 +21,13 @@ export class WalletController {
     return this.walletService.prepareCharge(req.user.id, dto);
   }
 
+  @Post('square/charge')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: 'Square 즉시 충전 (YR 호환 데모 — Toss 검증 없이 바로 적립)' })
+  instantCharge(@Request() req, @Body() dto: InstantChargeDto) {
+    return this.walletService.instantCharge(req.user.id, dto);
+  }
+
   @Post('charge/:id/confirm')
   @UseGuards(PassVerifiedGuard)
   @ApiOperation({ summary: 'Square 충전 확정 (Toss 결제 완료 후)' })
@@ -32,9 +40,21 @@ export class WalletController {
   }
 
   @Get('charges')
-  @ApiOperation({ summary: 'Square 충전 내역' })
+  @ApiOperation({ summary: 'Square 충전 내역 (walletCharge 레코드)' })
   getChargeHistory(@Request() req) {
     return this.walletService.getChargeHistory(req.user.id);
+  }
+
+  @Get('balance')
+  @ApiOperation({ summary: 'Square Wallet 잔액 (Fabric)' })
+  getBalance(@Request() req) {
+    return this.walletService.getSquareBalance(req.user.id);
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Square Wallet 거래 내역 (Fabric)' })
+  getHistory(@Request() req) {
+    return this.walletService.getSquareHistory(req.user.id);
   }
 
   @Get('toss-client-key')

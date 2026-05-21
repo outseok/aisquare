@@ -59,7 +59,13 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
 
     const tlsCert = fs.readFileSync(tlsCertPath);
     const credentials = grpc.credentials.createSsl(tlsCert);
-    this.grpcClient = new grpc.Client(peerEndpoint, credentials);
+    // peer TLS 인증서가 peer0.aisquare.com용으로 발급돼 있어서 localhost 접속 시 SNI mismatch.
+    // 클라이언트가 인증서 검증할 호스트명을 강제 지정.
+    const tlsHost = process.env.FABRIC_PEER_TLS_HOST || 'peer0.aisquare.com';
+    this.grpcClient = new grpc.Client(peerEndpoint, credentials, {
+      'grpc.ssl_target_name_override': tlsHost,
+      'grpc.default_authority': tlsHost,
+    });
 
     const certBase64 = process.env.FABRIC_ADMIN_CERT_BASE64!;
     const keyBase64 = process.env.FABRIC_ADMIN_KEY_BASE64!;

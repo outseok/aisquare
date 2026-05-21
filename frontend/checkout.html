@@ -208,10 +208,10 @@
                     </div>
                   </label>
                   <label>
-                    <input type="radio" name="method" value="SQUARE" ${squareBal < price ? 'disabled' : ''} />
+                    <input type="radio" name="method" value="SQUARE" />
                     <div class="info">
                       <b>Square Wallet 결제</b>
-                      <span>현재 보유 <span class="bal">${n(squareBal)} Square</span> ${squareBal < price ? `· <span style="color:#c8331f">잔액 부족 (₩${n(price - squareBal)} 부족)</span>` : '· 충분합니다'}</span>
+                      <span>현재 보유 <span class="bal">${n(squareBal)} Square</span> <span id="sqStatus"></span></span>
                     </div>
                   </label>
                 </div>
@@ -231,9 +231,11 @@
             <aside class="ch-aside">
               <div class="ch-total">
                 <div class="row"><span>상품 금액</span><span id="rowPrice">₩${n(price)}</span></div>
+                <div class="row"><span>결제 수수료 (+5%)</span><span id="rowFee">+₩${n(Math.floor(price * 0.05))}</span></div>
                 <div class="row discount"><span>Point 할인</span><span id="rowDiscount">−₩0</span></div>
-                <div class="row final"><span>최종 결제 금액</span><b id="rowFinal">₩${n(price)}</b></div>
-                <button type="button" class="ch-pay" id="payBtn">₩${n(price)} 결제하기</button>
+                <div class="row final"><span>최종 결제 금액</span><b id="rowFinal">₩${n(Math.floor(price * 1.05))}</b></div>
+                <div class="row" style="color:#1F8A5B;"><span>구매 확정 캐시백</span><span>+${n(Math.floor(price * 0.02))} Square</span></div>
+                <button type="button" class="ch-pay" id="payBtn">₩${n(Math.floor(price * 1.05))} 결제하기</button>
                 <p style="margin:14px 0 0;color:#87909d;font-size:11.5px;line-height:1.5;text-align:center;">결제는 72시간 자동 확정 정책으로 보호됩니다.<br>Hyperledger Fabric 에스크로에 잠금됩니다.</p>
               </div>
             </aside>
@@ -249,12 +251,21 @@
         function recalc() {
           let usePt = Math.max(0, Math.min(parseInt(usePointInput.value, 10) || 0, pointBal, price));
           usePointInput.value = usePt;
-          const finalKrw = price - usePt;
+          const finalKrw = Math.floor(price * 1.05) - usePt;
           rowDiscount.textContent = '−₩' + n(usePt);
           rowFinal.textContent = '₩' + n(finalKrw);
           payBtn.textContent = '₩' + n(finalKrw) + ' 결제하기';
           payBtn.dataset.final = String(finalKrw);
           payBtn.dataset.usePoint = String(usePt);
+          const sqStatus = document.getElementById('sqStatus');
+          if (sqStatus) {
+            if (squareBal >= finalKrw) {
+              sqStatus.innerHTML = '· 충분합니다';
+              sqStatus.style.color = '';
+            } else {
+              sqStatus.innerHTML = '· <span style="color:#c8331f">잔액 부족 (₩' + n(finalKrw - squareBal) + ' 부족)</span> · 선택 시 충전 페이지로 이동';
+            }
+          }
         }
         usePointInput.addEventListener('input', recalc);
         useAllBtn.addEventListener('click', () => { usePointInput.value = String(Math.min(pointBal, price)); recalc(); });
@@ -274,15 +285,26 @@
 
           try {
             if (method === 'SQUARE') {
+              if (squareBal < finalKrw) {
+                const shortBy = finalKrw - squareBal;
+                const go = confirm('Square 잔액이 ₩' + n(shortBy) + ' 부족합니다.\n충전 페이지로 이동하시겠어요?');
+                payBtn.disabled = false;
+                payBtn.textContent = '₩' + n(finalKrw) + ' 결제하기';
+                if (go) {
+                  location.href = './mypage.html?tab=wallet&need=' + encodeURIComponent(shortBy);
+                }
+                return;
+              }
               // Square Wallet 결제 — BE /orders/:id/pay/square
-              // 1. 먼저 order 생성
-              const order = await api.orders.create(product.id, 'SQUARE');
+              // 1. 먼저 order 생성 (usedPoint은 여기서 전달)
+              const order = await api.orders.create(product.id, 'SQUARE', usePoint);
               const orderId = order.id;
-              // 2. Square 결제 (POST /orders/:id/pay/square)
+              // 2. Square 결제 확정 (POST /orders/:id/pay/square — txHash 필수)
+              const txHash = 'sq-client-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
               const res = await fetch(api.API_BASE + `/orders/${orderId}/pay/square`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.getJwt() },
-                body: JSON.stringify({ usedPoint: usePoint }),
+                body: JSON.stringify({ txHash }),
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.message || 'Square 결제 실패');

@@ -183,6 +183,39 @@
       () => http('GET', '/auth/imp-config'),
       async () => mock({ impCode: 'imp22275820' }),
     ),
+    revokePass: dispatch(
+      async () => {
+        const updated = await http('DELETE', '/auth/pass');
+        if (updated) {
+          store.user = { ...(store.user || {}), ...updated, passVerified: !!updated.phoneVerified };
+          if (store.user) {
+            store.user.passName = updated.passName ?? null;
+            store.user.passVerifiedAt = updated.passVerifiedAt ?? null;
+          }
+          saveStore(store);
+        }
+        return { ok: true };
+      },
+      async () => {
+        if (store.user) {
+          store.user.passVerified = false;
+          store.user.passName = null;
+          store.user.passVerifiedAt = null;
+          saveStore(store);
+        }
+        return mock({ ok: true });
+      },
+    ),
+    deleteAccount: dispatch(
+      async () => {
+        await http('DELETE', '/auth/me');
+        setJwt(null);
+        store.user = null;
+        saveStore(store);
+        return { ok: true };
+      },
+      async () => { store.user = null; saveStore(store); return mock({ ok: true }); },
+    ),
   };
 
   // ── User ──────────────────────────────────────────────────────────
@@ -221,9 +254,9 @@
   };
 
   // ── Wallets ───────────────────────────────────────────────────────
-  // BE doesn't expose a square balance endpoint, but it has `/wallet/charges`
-  // (list of square top-ups). Sum up CONFIRMED ones to derive balance.
-  // Point: BE has `/points/balance` and `/points/history` directly.
+  // Square: Fabric 체인코드(wallet.GetSquareBalance/History)가 단일 진실 공급원.
+  //         BE의 /wallet/balance, /wallet/history 가 이를 래핑.
+  // Point:  BE의 /points/balance, /points/history.
   async function safeLive(fn, fallback) {
     try { return await fn(); } catch (e) { console.warn('[AISquareAPI] live fallback:', e.message); return fallback; }
   }
@@ -231,21 +264,35 @@
   const square = {
     getBalance: dispatch(
       async () => {
-        const charges = await safeLive(() => http('GET', '/wallet/charges'), []);
-        const total = (Array.isArray(charges) ? charges : []).filter(c => c.status === 'CONFIRMED').reduce((s, c) => s + (c.squareAmount || 0), 0);
-        return { balance: total };
+        const res = await safeLive(() => http('GET', '/wallet/balance'), { balance: 0 });
+        return { balance: Number(res?.balance || 0) };
       },
       async () => mock({ balance: store.square.balance }),
     ),
     getHistory: dispatch(
       async () => {
-        const charges = await safeLive(() => http('GET', '/wallet/charges'), []);
-        return { items: (Array.isArray(charges) ? charges : []).map(c => ({ id: c.id, type: 'CHARGE', amount: c.squareAmount, description: 'Square 충전', createdAt: c.createdAt })) };
+        const res = await safeLive(() => http('GET', '/wallet/history'), { items: [] });
+        const items = Array.isArray(res?.items) ? res.items : [];
+        // Fabric의 WalletTx 형식 → UI가 기대하는 { id, type, amount, description, createdAt }
+        return { items: items.map(t => {
+          const rawMemo = t.memo || t.Memo || '';
+          const cleanMemo = rawMemo.replace(/\s*\(charge=[^)]+\)/g, '').trim();
+          return {
+            id: t.txId || t.TxID || '',
+            type: t.txType || t.TxType || 'DEPOSIT',
+            amount: Number(t.amount ?? t.Amount ?? 0),
+            description: cleanMemo || 'Square 거래',
+            createdAt: t.timestamp || t.Timestamp || new Date().toISOString(),
+          };
+        }) };
       },
       async () => mock({ items: store.squareHistory }),
     ),
+    // 주의: 이 메서드는 BE의 prepareCharge만 호출 (PENDING walletCharge 생성).
+    // Toss SDK 호출과 confirm 단계는 호출처가 직접 처리해야 함 — mypage chargeBtn 참조.
+    // 반환값: { chargeId, tossOrderId, amountKrw, squareAmount, exchangeInfo }
     charge: dispatch(
-      (amount) => http('POST', '/wallet/charge', { squareAmount: amount }),
+      (amountKrw) => http('POST', '/wallet/charge', { amountKrw }),
       async (amount) => {
         store.square.balance += amount;
         store.squareHistory.unshift({ id: 'sq-' + Date.now(), type: 'CHARGE', amount, description: 'Square 충전', createdAt: new Date().toISOString() });
@@ -266,8 +313,18 @@
     ),
     getHistory: dispatch(
       async (params) => {
-        const list = await safeLive(() => http('GET', '/points/history' + qs(params)), []);
-        return { items: Array.isArray(list) ? list : [] };
+        // BE 응답: { items: [...], total, page, totalPages }
+        const res = await safeLive(() => http('GET', '/points/history' + qs(params)), { items: [] });
+        const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
+        // PointLog → UI({ id, type, amount, description, createdAt }) 매핑
+        return { items: items.map(p => ({
+          id: p.id,
+          type: p.type,
+          amount: Number(p.amount || 0),
+          description: p.memo || p.type,
+          createdAt: p.createdAt,
+          category: p.category,
+        })) };
       },
       async () => mock({ items: store.pointHistory }),
     ),
@@ -295,7 +352,7 @@
                           async () => mock(store.orders)),
     getSales:    dispatch(async ()         => adaptOrders(await http('GET',   '/orders/my/sales')),
                           async () => mock(store.sales || [])),
-    create:      dispatch((pid, m)         => http('POST', '/orders', { productId: pid, paymentMethod: m }), async () => mock({ id: 'O' + Date.now() })),
+    create:      dispatch((pid, m, usedPoint) => http('POST', '/orders', { productId: pid, paymentMethod: m, usedPoint: usedPoint || 0 }), async () => mock({ id: 'O' + Date.now() })),
     confirm:     dispatch((id)             => http('PATCH', `/orders/${id}/confirm`),
                           async (id) => { const o = store.orders.find(x => x.id === id); if (o) o.status = 'CONFIRMED'; saveStore(store); return mock({ ok: true }); }),
     getDownloadUrl: dispatch((id)          => http('GET',   `/orders/${id}/download`),

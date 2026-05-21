@@ -20,6 +20,9 @@ const FILE_TYPE_MAP: Record<string, FileType> = {
   'image/jpeg': 'JPG',
   'image/png': 'PNG',
   'video/mp4': 'MP4',
+  'text/plain': 'TXT',
+  'application/zip': 'ZIP',
+  'application/x-zip-compressed': 'ZIP',
 };
 
 @ApiTags('products')

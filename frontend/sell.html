@@ -46,6 +46,36 @@
       .cover-picker label img { width: 100%; height: 60px; object-fit: cover; display: block; }
       .cover-picker label:hover { transform: translateY(-2px); }
       .cover-picker input:checked + img, .cover-picker label:has(input:checked) { border-color: #1F3AE0; box-shadow: 0 0 0 2px rgba(31, 58, 224, 0.15); }
+      .cover-picker label.cover-upload-tile {
+        display: flex; align-items: center; justify-content: center;
+        height: 60px; padding: 0; box-sizing: border-box;
+        border: 2px dashed #c9d1de; border-radius: 6px; cursor: pointer;
+        background: #fafbfd; color: #677181;
+        transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+        overflow: hidden; position: relative;
+      }
+      .cover-picker label.cover-upload-tile:hover {
+        border-color: #1F3AE0; background: #f4f6ff; color: #1F3AE0; transform: translateY(-2px);
+      }
+      .cover-picker label.cover-upload-tile .ico {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 3px; font-size: 11px; font-weight: 800; line-height: 1; text-align: center;
+        margin: 0; pointer-events: none;
+      }
+      .cover-picker label.cover-upload-tile .ico svg { display: block; }
+      .cover-picker label.cover-upload-tile.has-image .ico { display: none; }
+      .cover-picker label.cover-upload-tile img.preview { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .cover-picker label.cover-upload-tile.is-selected {
+        border-style: solid; border-color: #1F3AE0; box-shadow: 0 0 0 2px rgba(31, 58, 224, 0.15);
+      }
+      .cover-picker label.cover-upload-tile .clear-pin {
+        position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
+        border: 0; padding: 0;
+        border-radius: 50%; background: rgba(0,0,0,0.55); color: #fff;
+        display: none; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 900; line-height: 1; cursor: pointer;
+      }
+      .cover-picker label.cover-upload-tile.has-image .clear-pin { display: flex; }
 
       .sell-actions { display: flex; gap: 10px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #ececf0; }
       .sell-submit { flex: 1; height: 48px; background: #050505; color: #fff; border: 0; border-radius: 8px; font-size: 15px; font-weight: 900; cursor: pointer; transition: background 0.15s ease, transform 0.08s ease; }
@@ -63,12 +93,37 @@
       .sell-fee .fee-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
       .sell-fee .fee-row b { color: #050505; }
 
+      .file-picker { margin-top: 8px; }
+      .file-drop {
+        display: flex; align-items: center; gap: 16px; padding: 22px 24px;
+        border: 2px dashed #d4dae4; border-radius: 12px; cursor: pointer;
+        background: #fafbfd; transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .file-drop:hover { border-color: #1F3AE0; background: #f4f6ff; }
+      .file-drop.dragover { border-color: #1F3AE0; background: #eef1ff; }
+      .file-drop.hidden { display: none; }
+      .file-drop-icon { color: #1F3AE0; flex-shrink: 0; }
+      .file-drop-text { display: flex; flex-direction: column; gap: 4px; }
+      .file-drop-text strong { font-size: 14px; color: #1f2a38; font-weight: 800; }
+      .file-drop-text span { font-size: 12.5px; color: #87909d; }
+      .file-info { margin-top: 10px; padding: 16px 18px; border: 1px solid #ececf0; border-radius: 10px; background: #fff; }
+      .file-info.hidden { display: none; }
+      .file-info-row { display: flex; padding: 5px 0; font-size: 13px; align-items: center; }
+      .file-info-label { width: 70px; color: #87909d; font-weight: 700; }
+      .file-info-value { flex: 1; color: #1f2a38; word-break: break-all; }
+      .file-info-value code { background: #f0f2f7; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      .file-info-value .muted { color: #87909d; font-size: 12px; margin-left: 6px; }
+      .file-type-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; background: #eef1ff; color: #1F3AE0; font-size: 12px; font-weight: 800; }
+      .file-clear { margin-top: 10px; padding: 6px 14px; background: #fff; border: 1px solid #d4dae4; border-radius: 6px; cursor: pointer; font-size: 12px; color: #677181; font-weight: 700; }
+      .file-clear:hover { background: #f4f6fa; }
+
       @media (max-width: 960px) {
         .sell-grid { grid-template-columns: 1fr; }
         .sell-row { grid-template-columns: 1fr; }
         .sell-aside { position: static; }
         .cover-picker { grid-template-columns: repeat(4, 1fr); }
         .sell-card { padding: 28px 24px; }
+        .file-drop { padding: 18px 16px; }
       }
     </style>
   </head>
@@ -146,22 +201,70 @@
                   <textarea id="sellDescription" placeholder="구매자가 어떤 결과물을 얻을 수 있는지, 어떻게 활용하는지 자세히 설명해 주세요." required></textarea>
                 </div>
 
+                <div class="sell-field">
+                  <label>가격 (Square) <em>*</em></label>
+                  <input id="sellPrice" type="number" placeholder="3500" min="1000" max="10000000" step="100" required />
+                  <span class="hint">권장 가격: 1,000 ~ 100,000 Square · 최대 10,000,000 Square</span>
+                </div>
+
                 <div class="sell-row">
                   <div class="sell-field">
-                    <label>가격 (Square) <em>*</em></label>
-                    <input id="sellPrice" type="number" placeholder="3500" min="1000" max="50000" step="100" required />
-                    <span class="hint">권장 가격: 1,000 ~ 10,000 Square</span>
+                    <label>예상 정산액 (수수료 5%)</label>
+                    <input id="sellPayout" type="text" placeholder="-" readonly />
+                    <span class="hint">판매자 부담 수수료 5%를 뗀 금액 (Square)</span>
                   </div>
                   <div class="sell-field">
-                    <label>예상 정산액 (수수료 8%)</label>
-                    <input id="sellPayout" type="text" placeholder="-" readonly />
+                    <label>예상 캐시백 (2% Square)</label>
+                    <input id="sellCashback" type="text" placeholder="-" readonly />
+                    <span class="hint">구매 확정 시 Square Wallet에 자동 적립</span>
                   </div>
+                </div>
+                <div class="sell-field">
+                  <label>구매자 결제 예정액 (+5%)</label>
+                  <input id="sellPayPrice" type="text" placeholder="-" readonly />
+                  <span class="hint">구매자도 가격 위에 5%를 더 부담합니다 (구매자 캐시백 2% Square 별도)</span>
+                </div>
+
+                <div class="sell-field">
+                  <label>판매 파일 <em>*</em></label>
+                  <div class="file-picker">
+                    <input type="file" id="sellFile" accept=".pdf,.png,.jpg,.jpeg,.mp4,.txt,.zip" hidden />
+                    <label for="sellFile" class="file-drop" id="fileDrop">
+                      <div class="file-drop-icon">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v14m-6-8 6-6 6 6"/><path d="M5 21h14"/></svg>
+                      </div>
+                      <div class="file-drop-text">
+                        <strong>파일을 선택하거나 끌어다 놓으세요</strong>
+                        <span>PDF · 사진(PNG/JPG) · MP4 · TXT · ZIP · 최대 2GB</span>
+                      </div>
+                    </label>
+                    <div class="file-info hidden" id="fileInfo">
+                      <div class="file-info-row">
+                        <span class="file-info-label">파일명</span>
+                        <span class="file-info-value" id="fileName">-</span>
+                      </div>
+                      <div class="file-info-row">
+                        <span class="file-info-label">분류</span>
+                        <span class="file-info-value"><span class="file-type-badge" id="fileTypeBadge">-</span></span>
+                      </div>
+                      <div class="file-info-row">
+                        <span class="file-info-label">확장자</span>
+                        <span class="file-info-value"><code id="fileExt">-</code><span class="muted" id="fileExtSrc"></span></span>
+                      </div>
+                      <div class="file-info-row">
+                        <span class="file-info-label">크기</span>
+                        <span class="file-info-value" id="fileSize">-</span>
+                      </div>
+                      <button type="button" class="file-clear" id="fileClear">파일 변경</button>
+                    </div>
+                  </div>
+                  <span class="hint">허용 형식: PDF, 사진(PNG·JPG), MP4, TXT, ZIP — 최대 2GB</span>
                 </div>
 
                 <div class="sell-field">
                   <label>대표 이미지 <em>*</em></label>
                   <div class="cover-picker" id="coverPicker">
-                    <label><input type="radio" name="cover" value="01" required /><img src="./assets/cover-01.svg" alt="cover 1" /></label>
+                    <label><input type="radio" name="cover" value="01" /><img src="./assets/cover-01.svg" alt="cover 1" /></label>
                     <label><input type="radio" name="cover" value="02" /><img src="./assets/cover-02.svg" alt="cover 2" /></label>
                     <label><input type="radio" name="cover" value="03" /><img src="./assets/cover-03.svg" alt="cover 3" /></label>
                     <label><input type="radio" name="cover" value="04" /><img src="./assets/cover-04.svg" alt="cover 4" /></label>
@@ -173,13 +276,16 @@
                     <label><input type="radio" name="cover" value="10" /><img src="./assets/cover-10.svg" alt="cover 10" /></label>
                     <label><input type="radio" name="cover" value="11" /><img src="./assets/cover-11.svg" alt="cover 11" /></label>
                     <label><input type="radio" name="cover" value="12" /><img src="./assets/cover-12.svg" alt="cover 12" /></label>
+                    <label class="cover-upload-tile" id="coverUploadTile">
+                      <input type="file" id="coverUploadInput" accept="image/png,image/jpeg,image/jpg,image/webp" hidden />
+                      <span class="ico">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        직접 업로드
+                      </span>
+                      <button type="button" class="clear-pin" id="coverUploadClear" aria-label="업로드 취소">×</button>
+                    </label>
                   </div>
-                  <span class="hint">12종 표지 중 선택하거나 직접 업로드 (직접 업로드는 준비 중)</span>
-                </div>
-
-                <div class="sell-field">
-                  <label>판매자 닉네임 <em>*</em></label>
-                  <input id="sellNickname" type="text" placeholder="자동으로 채워집니다" required />
+                  <span class="hint">12종 표지 중 선택하거나 마지막 칸에서 직접 이미지를 업로드하세요 (PNG·JPG·WebP, 최대 10MB)</span>
                 </div>
 
                 <div class="sell-actions">
@@ -192,7 +298,10 @@
             <aside class="sell-aside">
               <div class="sell-fee">
                 <h3>수수료 안내</h3>
-                <div class="fee-row"><span>판매 수수료</span><b>8%</b></div>
+                <div class="fee-row"><span>판매자 수수료</span><b>5%</b></div>
+                <div class="fee-row"><span>판매자 캐시백</span><b>+2% Square</b></div>
+                <div class="fee-row"><span>구매자 추가 부담</span><b>+5%</b></div>
+                <div class="fee-row"><span>구매자 캐시백</span><b>+2% Square</b></div>
                 <div class="fee-row"><span>정산 주기</span><b>구매 확정 후</b></div>
                 <div class="fee-row"><span>출금 영업일</span><b>1~2일</b></div>
               </div>
@@ -219,21 +328,159 @@
       (function() {
         var priceInput = document.getElementById('sellPrice');
         var payoutInput = document.getElementById('sellPayout');
-        var nicknameInput = document.getElementById('sellNickname');
+        var cashbackInput = document.getElementById('sellCashback');
+        var payPriceInput = document.getElementById('sellPayPrice');
         var form = document.getElementById('sellForm');
         var draftBtn = document.getElementById('sellDraftBtn');
+        var coverUploadInput = document.getElementById('coverUploadInput');
+        var coverUploadTile = document.getElementById('coverUploadTile');
+        var coverUploadClear = document.getElementById('coverUploadClear');
+        var customCoverFile = null;
+        var customCoverPreviewUrl = null;
+        var COVER_MAX = 10 * 1024 * 1024;
+        var fileInput = document.getElementById('sellFile');
+        var fileDrop = document.getElementById('fileDrop');
+        var fileInfo = document.getElementById('fileInfo');
+        var fileNameEl = document.getElementById('fileName');
+        var fileSizeEl = document.getElementById('fileSize');
+        var fileExtEl = document.getElementById('fileExt');
+        var fileExtSrcEl = document.getElementById('fileExtSrc');
+        var fileTypeBadgeEl = document.getElementById('fileTypeBadge');
+        var fileClearBtn = document.getElementById('fileClear');
+        var selectedFile = null;
 
-        // Auto-calc payout (price * 0.92)
-        priceInput.addEventListener('input', function() {
-          var p = parseInt(priceInput.value, 10);
-          payoutInput.value = isNaN(p) ? '-' : Math.floor(p * 0.92).toLocaleString() + ' Square';
+        var MAX_SIZE = 2 * 1024 * 1024 * 1024;
+        var TYPE_MAP = {
+          pdf:  { label: '문서 (PDF)',     mime: 'application/pdf' },
+          png:  { label: '사진 (PNG/JPG)', mime: 'image/png' },
+          jpg:  { label: '사진 (PNG/JPG)', mime: 'image/jpeg' },
+          jpeg: { label: '사진 (PNG/JPG)', mime: 'image/jpeg' },
+          mp4:  { label: '동영상 (MP4)',   mime: 'video/mp4' },
+          txt:  { label: '텍스트 (TXT)',   mime: 'text/plain' },
+          zip:  { label: '압축 (ZIP)',     mime: 'application/zip' }
+        };
+        var MIME_TO_EXT = {
+          'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg',
+          'video/mp4': 'mp4', 'text/plain': 'txt',
+          'application/zip': 'zip', 'application/x-zip-compressed': 'zip'
+        };
+
+        function formatSize(b) {
+          if (b < 1024) return b + ' B';
+          if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+          if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + ' MB';
+          return (b / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+        }
+
+        function detectExt(file) {
+          var n = (file.name || '').toLowerCase();
+          var dot = n.lastIndexOf('.');
+          var fromName = dot >= 0 ? n.slice(dot + 1) : '';
+          if (fromName && TYPE_MAP[fromName]) return { ext: fromName, source: '파일명 기반' };
+          var byMime = MIME_TO_EXT[(file.type || '').toLowerCase()];
+          if (byMime) return { ext: byMime, source: 'MIME 기반' };
+          return { ext: fromName || '', source: '' };
+        }
+
+        function handleFile(file) {
+          if (!file) return;
+          var t = window.showToast || function(m){ alert(m); };
+          if (file.size > MAX_SIZE) {
+            t('파일이 너무 큽니다. 최대 2GB까지 가능합니다. (현재 ' + formatSize(file.size) + ')');
+            fileInput.value = '';
+            return;
+          }
+          var det = detectExt(file);
+          if (!TYPE_MAP[det.ext]) {
+            t('지원하지 않는 형식입니다. PDF·PNG·JPG·MP4·TXT·ZIP만 가능합니다.');
+            fileInput.value = '';
+            return;
+          }
+          selectedFile = file;
+          fileNameEl.textContent = file.name;
+          fileSizeEl.textContent = formatSize(file.size);
+          fileExtEl.textContent = '.' + det.ext;
+          fileExtSrcEl.textContent = det.source ? ' (' + det.source + ' 자동 감지)' : '';
+          fileTypeBadgeEl.textContent = TYPE_MAP[det.ext].label;
+          fileDrop.classList.add('hidden');
+          fileInfo.classList.remove('hidden');
+        }
+
+        fileInput.addEventListener('change', function(e) {
+          handleFile(e.target.files && e.target.files[0]);
+        });
+        fileClearBtn.addEventListener('click', function() {
+          selectedFile = null;
+          fileInput.value = '';
+          fileDrop.classList.remove('hidden');
+          fileInfo.classList.add('hidden');
+        });
+        ['dragenter', 'dragover'].forEach(function(ev) {
+          fileDrop.addEventListener(ev, function(e) { e.preventDefault(); fileDrop.classList.add('dragover'); });
+        });
+        ['dragleave', 'drop'].forEach(function(ev) {
+          fileDrop.addEventListener(ev, function(e) { e.preventDefault(); fileDrop.classList.remove('dragover'); });
+        });
+        fileDrop.addEventListener('drop', function(e) {
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFile(e.dataTransfer.files[0]);
+          }
         });
 
-        // Pre-fill nickname from logged-in user
-        try {
-          var s = JSON.parse(localStorage.getItem('aisquare-mock-store-v2'));
-          if (s && s.user && s.user.nickname) nicknameInput.value = s.user.nickname;
-        } catch (e) {}
+        // Auto-calc: 정산 95% + 캐시백 2% Square + 구매자 결제액 105%
+        priceInput.addEventListener('input', function() {
+          var p = parseInt(priceInput.value, 10);
+          if (isNaN(p)) {
+            payoutInput.value = '-';
+            if (cashbackInput) cashbackInput.value = '-';
+            if (payPriceInput) payPriceInput.value = '-';
+            return;
+          }
+          payoutInput.value = Math.floor(p * 0.95).toLocaleString() + ' Square';
+          if (cashbackInput) cashbackInput.value = '+' + Math.floor(p * 0.02).toLocaleString() + ' Square';
+          if (payPriceInput) payPriceInput.value = Math.floor(p * 1.05).toLocaleString() + ' Square';
+        });
+
+        // Custom cover upload (13th tile)
+        function clearCustomCover() {
+          customCoverFile = null;
+          if (customCoverPreviewUrl) { URL.revokeObjectURL(customCoverPreviewUrl); customCoverPreviewUrl = null; }
+          var existingImg = coverUploadTile.querySelector('img.preview');
+          if (existingImg) existingImg.remove();
+          coverUploadTile.classList.remove('is-selected', 'has-image');
+          coverUploadInput.value = '';
+        }
+        coverUploadInput.addEventListener('change', function(e) {
+          var f = e.target.files && e.target.files[0];
+          if (!f) return;
+          if (!/^image\/(png|jpe?g|webp)$/i.test(f.type)) {
+            (window.showToast || alert)('PNG, JPG, WebP 이미지만 업로드 가능합니다.');
+            coverUploadInput.value = ''; return;
+          }
+          if (f.size > COVER_MAX) {
+            (window.showToast || alert)('표지 이미지는 최대 10MB까지 업로드 가능합니다.');
+            coverUploadInput.value = ''; return;
+          }
+          customCoverFile = f;
+          document.querySelectorAll('input[name="cover"]').forEach(function(r) { r.checked = false; });
+          if (customCoverPreviewUrl) URL.revokeObjectURL(customCoverPreviewUrl);
+          customCoverPreviewUrl = URL.createObjectURL(f);
+          var existingImg = coverUploadTile.querySelector('img.preview');
+          if (existingImg) existingImg.remove();
+          var img = document.createElement('img');
+          img.src = customCoverPreviewUrl; img.className = 'preview';
+          coverUploadTile.insertBefore(img, coverUploadTile.firstChild);
+          coverUploadTile.classList.add('is-selected', 'has-image');
+        });
+        coverUploadClear.addEventListener('click', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          clearCustomCover();
+        });
+        document.querySelectorAll('input[name="cover"]').forEach(function(r) {
+          r.addEventListener('change', function() {
+            if (r.checked && customCoverFile) clearCustomCover();
+          });
+        });
 
         // Submit handler — REAL BE create
         form.addEventListener('submit', async function(e) {
@@ -253,6 +500,10 @@
             return;
           }
 
+          if (!selectedFile) {
+            t('판매 파일을 선택해 주세요.');
+            return;
+          }
           var submit = form.querySelector('.sell-submit');
           submit.disabled = true; submit.textContent = '등록 중...';
 
@@ -267,16 +518,18 @@
             var cat = document.getElementById('sellCategory').value || '';
             fd.append('tags', JSON.stringify(cat ? [cat] : []));
 
-            // Stub sell file (PDF placeholder so BE accepts the mimetype)
-            var stub = new Blob(
-              ['%PDF-1.4\n% AISquare 상품 자료 (stub)\n등록자: ' + (me.nickname||'') + '\n시각: ' + new Date().toISOString()],
-              { type: 'application/pdf' }
-            );
-            fd.append('file', stub, 'product.pdf');
+            fd.append('file', selectedFile, selectedFile.name);
 
-            // Cover image: fetch chosen cover-XX.svg as blob → upload
-            var coverChoice = document.querySelector('input[name="cover"]:checked');
-            if (coverChoice) {
+            // Cover image: custom upload > preset (cover-XX.svg)
+            if (customCoverFile) {
+              fd.append('image', customCoverFile, customCoverFile.name);
+            } else {
+              var coverChoice = document.querySelector('input[name="cover"]:checked');
+              if (!coverChoice) {
+                t('대표 이미지를 선택하거나 직접 업로드해 주세요.');
+                submit.disabled = false; submit.textContent = '상품 등록';
+                return;
+              }
               var coverPath = './assets/cover-' + coverChoice.value + '.svg';
               try {
                 var coverRes = await fetch(coverPath);

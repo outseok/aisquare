@@ -223,7 +223,7 @@
                 <div class="stat-card"><div class="lbl">에스크로 보류</div><div class="val">${fmt(num(s.hold))}<em>건</em></div></div>
                 <div class="stat-card"><div class="lbl">환불액</div><div class="val">${fmt(krw(s.refunded))}<em>원</em></div></div>
               </div>
-              <p class="sub" style="color:#87909d;font-size:12.5px;margin-top:16px;">정산 정책: 구매 확정 시 판매 금액의 92%가 판매자에게, 8%가 플랫폼 수익.</p>
+              <p class="sub" style="color:#87909d;font-size:12.5px;margin-top:16px;">정산 정책: 판매자 정산 95% + 양쪽 2% Square 캐시백 + 플랫폼 6%. 구매자는 표시 가격 위에 5% 추가 결제(가격×1.05).</p>
             `;
           } catch (e) {
             panel.innerHTML = '<div class="ad-empty">대시보드 로드 실패: ' + (e.message||'') + '</div>';

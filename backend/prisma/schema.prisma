@@ -22,6 +22,8 @@ model User {
   trustToken       Float      @default(10)
   bio              String?  @db.Text
   passId           String?
+  passName         String?
+  passVerifiedAt   DateTime?
   squareWalletAddr String?
   pointWalletAddr  String?
   createdAt        DateTime   @default(now())
@@ -245,6 +247,8 @@ enum FileType {
   JPG
   PNG
   MP4
+  TXT
+  ZIP
 }
 
 enum ProductStatus {

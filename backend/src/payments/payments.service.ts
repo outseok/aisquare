@@ -120,10 +120,8 @@ export class PaymentsService {
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
     if (product.sellerId === buyerId) throw new BadRequestException('본인 상품은 구매할 수 없습니다');
 
-    // Schema only has `price` (Int) representing the KRW price after our
-    // SQLite migration — use it directly, derive an RP-equivalent for
-    // the bonus calc only.
-    const amountKrw = product.price;
+    // 새 정책: 구매자가 표시 가격 위에 5% 추가 결제 (판매자도 5% 부담, 각 2% Square 캐시백)
+    const amountKrw = Math.floor(product.price * 1.05);
     const priceRp = Math.floor((amountKrw * 100) / KRW_PER_100RP);
     const tossOrderId = `prod-${uuidv4()}`;
 
