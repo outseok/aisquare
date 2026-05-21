@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>상품 상세 — AISquare</title>
-    <link rel="stylesheet" href="./styles.css?v=1779353750" />
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
     <script>
       (function () {
         try {
@@ -12,6 +12,28 @@
           var u = s && JSON.parse(s).user;
           if (u) document.documentElement.classList.add('aisq-loggedin');
           if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
         } catch (e) {}
       })();
     </script>
@@ -91,7 +113,7 @@
     <header class="answer-header">
       <div class="answer-wrap">
         <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
-          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
         </a>
         <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
           <a href="./index.html" data-tab="home">홈</a>
@@ -119,8 +141,8 @@
             <span class="pending-badge hidden" id="hdrAdminBadge"></span>
           </a>
           <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
-            <span class="avatar" id="hdrAvatar">U</span>
-            <span class="name" id="hdrName">사용자</span>
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
           </a>
           <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
           <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
@@ -141,7 +163,7 @@
     <footer class="kmong-footer">
       <div class="kmong-wrap">
         <div class="footer-bottom">
-          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
         </div>
         <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
       </div>
@@ -149,8 +171,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779353750"></script>
-    <script src="./app.js?v=1779353750"></script>
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
     <script>
       (async function() {
         var api = window.AISquareAPI;
@@ -180,7 +202,7 @@
 
         root.innerHTML = [
           '<div class="pd-grid">',
-            '<div class="pd-cover"><img src="./assets/' + product.cover + '" alt="' + product.title + '" /></div>',
+            '<div class="pd-cover"><img src="' + (product.imageUrl || (/^https?:\/\//i.test(product.cover) ? product.cover : "./assets/" + product.cover)) + '" alt="' + product.title + '" /></div>',
             '<div class="pd-info">',
               badge,
               '<h1>' + product.title + '</h1>',
@@ -201,11 +223,28 @@
                 '<div class="info"><b>' + product.sellerName + '</b><span id="pdSellerStats">불러오는 중...</span></div>',
                 '<div class="arrow">›</div>',
               '</div>',
-              '<div class="pd-actions">',
-                '<button class="pd-btn" id="pdWish" data-state="off"><span class="pd-icn">♡</span><span class="pd-label">찜하기</span></button>',
-                '<button class="pd-btn" id="pdCart" data-state="off"><span class="pd-icn">🛒</span><span class="pd-label">장바구니</span></button>',
-              '</div>',
-              '<button class="pd-buy" id="pdBuy">' + product.priceSquare.toLocaleString() + ' Square로 바로 구매</button>',
+              (function() {
+                var me = api.getCurrentUser && api.getCurrentUser();
+                var isOwn = me && (me.username === product.sellerUsername || me.id === product.sellerId);
+                if (product.status === 'SOLD') return '<div class="pd-actions"></div>';
+                if (isOwn) {
+                  return '<div class="pd-actions" style="opacity:0.55;pointer-events:none;">'
+                    + '<button class="pd-btn" disabled><span class="pd-icn">♡</span><span class="pd-label">본인 상품</span></button>'
+                    + '<button class="pd-btn" disabled><span class="pd-icn">🛒</span><span class="pd-label">본인 상품</span></button>'
+                  + '</div>';
+                }
+                return '<div class="pd-actions">'
+                  + '<button class="pd-btn" id="pdWish" data-state="off"><span class="pd-icn">♡</span><span class="pd-label">찜하기</span></button>'
+                  + '<button class="pd-btn" id="pdCart" data-state="off"><span class="pd-icn">🛒</span><span class="pd-label">장바구니</span></button>'
+                + '</div>';
+              })(),
+              (function() {
+                var me = api.getCurrentUser && api.getCurrentUser();
+                var isOwn = me && (me.username === product.sellerUsername || me.id === product.sellerId);
+                if (product.status === 'SOLD') return '<button class="pd-buy" id="pdBuy" disabled style="background:#9b9b9b;cursor:not-allowed;opacity:0.85;">판매 완료 — 더 이상 구매할 수 없습니다</button>';
+                if (isOwn) return '<button class="pd-buy" id="pdBuy" disabled style="background:#9b9b9b;cursor:not-allowed;opacity:0.85;">본인이 등록한 상품은 구매할 수 없습니다</button>';
+                return '<button class="pd-buy" id="pdBuy">' + product.priceSquare.toLocaleString() + ' Square로 바로 구매</button>';
+              })(),
               '<div class="pd-meta">',
                 '<div class="pd-meta-item"><span class="k">카테고리</span><span class="v">' + (product.category || '-') + '</span></div>',
                 '<div class="pd-meta-item"><span class="k">등록일</span><span class="v">' + (product.createdAt || '-') + '</span></div>',
@@ -216,8 +255,16 @@
           '</div>',
           '<div class="pd-sections">',
             '<div class="pd-block">',
-              '<h2>이 상품은 어떤 노하우인가요?</h2>',
-              '<p>실무에서 검증된 ' + (product.tags || []).join(' · ') + ' 노하우를 즉시 활용할 수 있는 형태로 정리한 자료입니다. 다운로드 후 자유롭게 수정·재가공하여 사용하실 수 있으며, 72시간 자동 확정 정책으로 안전하게 거래됩니다.</p>',
+              '<h2>상품 상세 설명</h2>',
+              (function() {
+                var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"\047]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); };
+                var desc = (product.description || "").trim();
+                if (desc) {
+                  return '<p style="white-space:pre-wrap;">' + esc(desc) + '</p>';
+                }
+                // 판매자가 상세 설명을 비워둔 경우에만 기본 문구 노출
+                return '<p style="color:#87909d;">판매자가 상세 설명을 등록하지 않았습니다.</p>';
+              })(),
             '</div>',
             // 상품별 리뷰는 1:1 판매 특성상 부적합 — 판매자 페이지의 통합 리뷰로 안내
             '<div class="pd-block" style="background:#fafbfc;border:1px dashed #d4dae4;border-radius:14px;padding:24px 28px;text-align:center;">',
@@ -234,18 +281,20 @@
         const buyBtn  = document.getElementById('pdBuy');
 
         function setWishState(on) {
+          if (!wishBtn) return;
           wishBtn.dataset.state = on ? 'on' : 'off';
           wishBtn.querySelector('.pd-icn').textContent = on ? '❤' : '♡';
           wishBtn.querySelector('.pd-label').textContent = on ? '찜됨' : '찜하기';
         }
         function setCartState(on) {
+          if (!cartBtn) return;
           cartBtn.dataset.state = on ? 'on' : 'off';
           cartBtn.querySelector('.pd-icn').textContent = on ? '✓🛒' : '🛒';
           cartBtn.querySelector('.pd-label').textContent = on ? '담김' : '장바구니';
         }
 
-        // Sync initial state from BE wishlist/cart
-        if (api.isLoggedIn()) {
+        // Sync initial state from BE wishlist/cart (only if buttons exist — not own product)
+        if (api.isLoggedIn() && wishBtn && cartBtn) {
           (async () => {
             try {
               const [w, c] = await Promise.all([
@@ -258,7 +307,7 @@
           })();
         }
 
-        wishBtn.addEventListener('click', async function() {
+        if (wishBtn) wishBtn.addEventListener('click', async function() {
           if (!api.isLoggedIn()) { t('로그인이 필요합니다.'); setTimeout(function(){ location.href='./login.html'; }, 800); return; }
           const wasOn = wishBtn.dataset.state === 'on';
           try {
@@ -269,7 +318,7 @@
             else t(e.message || '찜 처리에 실패했습니다.');
           }
         });
-        cartBtn.addEventListener('click', async function() {
+        if (cartBtn) cartBtn.addEventListener('click', async function() {
           if (!api.isLoggedIn()) { t('로그인이 필요합니다.'); setTimeout(function(){ location.href='./login.html'; }, 800); return; }
           const wasOn = cartBtn.dataset.state === 'on';
           try {

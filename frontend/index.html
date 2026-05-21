@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AISquare — AI 노하우를 사고파는 마켓</title>
     <meta name="description" content="검증된 AI 활용 노하우, 프롬프트, 자동화 시트를 거래하는 Web3 마켓플레이스 AISquare." />
-    <link rel="stylesheet" href="./styles.css?v=1779353750" />
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
     <script>
       (function () {
         try {
@@ -13,6 +13,28 @@
           var u = s && JSON.parse(s).user;
           if (u) document.documentElement.classList.add('aisq-loggedin');
           if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
         } catch (e) {}
       })();
     </script>
@@ -21,7 +43,7 @@
     <header class="answer-header">
       <div class="answer-wrap">
         <a class="answer-logo" href="./index.html" data-toast="AISquare 홈" aria-label="AISquare 홈">
-          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
         </a>
         <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
           <a class="active" href="./index.html" data-tab="home">홈</a>
@@ -49,8 +71,8 @@
             <span class="pending-badge hidden" id="hdrAdminBadge"></span>
           </a>
           <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
-            <span class="avatar" id="hdrAvatar">U</span>
-            <span class="name" id="hdrName">사용자</span>
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
           </a>
           <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
           <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
@@ -150,32 +172,7 @@
               <a class="service-tab" href="#" data-service="콘텐츠 캘린더">콘텐츠 캘린더 <b>＋</b></a>
               <a class="service-tab" href="#" data-service="광고 최적화">광고 최적화 <b>＋</b></a>
             </div>
-            <div class="market-grid">
-              <article class="market-card" data-product-id="p001">
-                <img src="./assets/cover-01.svg" alt="" />
-                <h3>GPT-5 SNS 광고 카피 프롬프트 50종 + 톤앤매너 학습 시트</h3>
-                <p><span>★</span> 4.9 <em>(270)</em></p>
-                <strong>5,500 Square~</strong><small>soyeon.k</small>
-              </article>
-              <article class="market-card" data-product-id="p002">
-                <img src="./assets/cover-02.svg" alt="" />
-                <h3>주간 마케팅 리포트 자동 생성 GPT-5 프롬프트 패키지</h3>
-                <p><span>★</span> 4.8 <em>(129)</em></p>
-                <strong>3,200 Square~</strong><small>mkt.lab</small>
-              </article>
-              <article class="market-card" data-product-id="p003">
-                <img src="./assets/cover-03.svg" alt="" />
-                <h3>네이버·구글 키워드 분석 자동화 시트 + Claude 프롬프트</h3>
-                <p><span>★</span> 4.9 <em>(2,976)</em></p>
-                <strong>2,800 Square~</strong><small>seo.master</small>
-              </article>
-              <article class="market-card" data-product-id="p004">
-                <img src="./assets/cover-04.svg" alt="" />
-                <h3>블로그 SEO 자동화 워크시트 · 월 100건 검색 상위 노출</h3>
-                <p><span>★</span> 4.9 <em>(135)</em></p>
-                <strong>10,000 Square</strong><small>A플랜</small>
-              </article>
-            </div>
+            <div class="market-grid" id="homeGridMarketer"></div>
           </div>
 
           <div class="product-block" data-block="creator">
@@ -186,32 +183,7 @@
               <a class="service-tab" href="#" data-service="자막 자동화">자막 자동화 <b>＋</b></a>
               <a class="service-tab" href="#" data-service="SNS 큐레이션">SNS 큐레이션 <b>＋</b></a>
             </div>
-            <div class="market-grid">
-              <article class="market-card" data-product-id="p005">
-                <img src="./assets/cover-05.svg" alt="" />
-                <h3>유튜브 후킹 스크립트 GPT 프롬프트 · 평균 시청 지속률 +18%</h3>
-                <p><span>★</span> 5.0 <em>(133)</em></p>
-                <strong>1,500 Square~</strong><small>youtuber.jin</small>
-              </article>
-              <article class="market-card" data-product-id="p006">
-                <img src="./assets/cover-06.svg" alt="" />
-                <h3>Midjourney v7 + DALL·E 3 썸네일 자동 생성 프롬프트 100선</h3>
-                <p><span>★</span> 4.9 <em>(3,255)</em></p>
-                <strong>10,000 Square~</strong><small>thumbnail.master</small>
-              </article>
-              <article class="market-card" data-product-id="p007">
-                <img src="./assets/cover-07.svg" alt="" />
-                <h3>릴스·쇼츠 자막 자동 생성 + 감정 분석 GPT 시트</h3>
-                <p><span>★</span> 4.9 <em>(688)</em></p>
-                <strong>3,400 Square~</strong><small>shorts.kim</small>
-              </article>
-              <article class="market-card" data-product-id="p008">
-                <img src="./assets/cover-08.svg" alt="" />
-                <h3>인스타·X 일주일치 콘텐츠 큐레이션 GPT 자동화</h3>
-                <p><span>★</span> 4.9 <em>(96)</em></p>
-                <strong>500 Square~</strong><small>sns.lab</small>
-              </article>
-            </div>
+            <div class="market-grid" id="homeGridCreator"></div>
           </div>
 
           <div class="product-block" data-block="dev">
@@ -222,32 +194,7 @@
               <a class="service-tab" href="#" data-service="문서화 자동화">문서화 자동화 <b>＋</b></a>
               <a class="service-tab" href="#" data-service="디버깅 어시스턴트">디버깅 어시스턴트 <b>＋</b></a>
             </div>
-            <div class="market-grid">
-              <article class="market-card" data-product-id="p009">
-                <img src="./assets/cover-09.svg" alt="" />
-                <h3>Cursor + Claude 코드 리뷰 자동화 · 컨벤션 100% 일치</h3>
-                <p><span>★</span> 4.9 <em>(553)</em></p>
-                <strong>2,500 Square~</strong><small>devmate</small>
-              </article>
-              <article class="market-card" data-product-id="p010">
-                <img src="./assets/cover-10.svg" alt="" />
-                <h3>NestJS · FastAPI API 문서 자동 생성 GPT 프롬프트 세트</h3>
-                <p><span>★</span> 5.0 <em>(457)</em></p>
-                <strong>39,900 Square</strong><small>docgen</small>
-              </article>
-              <article class="market-card" data-product-id="p011">
-                <img src="./assets/cover-11.svg" alt="" />
-                <h3>Jest · Vitest 단위 테스트 자동 생성 Claude 프롬프트</h3>
-                <p><span>★</span> 5.0 <em>(1)</em></p>
-                <strong>50,000 Square</strong><small>ChairTeam</small>
-              </article>
-              <article class="market-card" data-product-id="p012">
-                <img src="./assets/cover-12.svg" alt="" />
-                <h3>에러 로그 분석 → 픽스 제안 GPT 프롬프트 · 디버깅 단축</h3>
-                <p><span>★</span> 4.9 <em>(40)</em></p>
-                <strong>1,600 Square~</strong><small>debug.helper</small>
-              </article>
-            </div>
+            <div class="market-grid" id="homeGridDev"></div>
           </div>
         </div>
       </section>
@@ -328,7 +275,7 @@
           </nav>
         </div>
         <div class="footer-bottom">
-          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
         </div>
         <p class="company muted">AISquare는 통신판매중개자이며 통신판매의 당사자가 아닙니다. 상품, 상품정보, 거래에 관한 의무와 책임은 판매회원에게 있습니다.</p>
         <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
@@ -356,8 +303,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="./api.js?v=1779353750"></script>
-    <script src="./app.js?v=1779353750"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
 
     <!-- Three.js for hero 3D scene -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>

@@ -197,6 +197,40 @@ async function main() {
   });
   console.log('Default admin user 생성 — username: admin / password: admin123');
 
+  // ── Naver Pay admin user (네이버 관리자 콘솔용) ─────────────────────────
+  await prisma.user.upsert({
+    where: { username: 'naver-admin' },
+    update: { isNaverAdmin: true } as any,
+    create: {
+      username: 'naver-admin',
+      passwordHash: adminPasswordHash,
+      name: 'NaverPay 관리자',
+      nickname: '네이버페이관리자',
+      email: 'naver-admin@aisquare.com',
+      phone: '01000000001',
+      phoneVerified: true,
+      isNaverAdmin: true,
+    } as any,
+  });
+  console.log('NaverPay admin 생성 — username: naver-admin / password: admin123');
+
+  // ── 테스트 일반 사용자 (clone 후 즉시 로그인 + 구매·판매 테스트) ──────
+  const testUserHash = await bcrypt.hash('22222222', 10);
+  await prisma.user.upsert({
+    where: { username: '2222' },
+    update: {},
+    create: {
+      username: '2222',
+      passwordHash: testUserHash,
+      name: '테스트 유저',
+      nickname: '2222',
+      email: '2222@aisquare.com',
+      phone: '01022222222',
+      phoneVerified: true,
+    } as any,
+  });
+  console.log('Test user 생성 — username: 2222 / password: 22222222');
+
   // Seller users
   const sellerById: Record<string, string> = {};
   for (const s of sellers) {
@@ -234,6 +268,86 @@ async function main() {
       } as any,
     });
   }
+
+  // ── 일부 상품을 SOLD 처리 + 주문/리뷰 시드 ──
+  // 데모용 demo buyer 1명 만들고, 그 사람이 상품 일부를 사서 확정 + 리뷰 남긴 상태로
+  const buyer = await prisma.user.upsert({
+    where: { username: 'demo.buyer' },
+    update: {},
+    create: {
+      username: 'demo.buyer',
+      passwordHash,
+      name: '데모구매자',
+      nickname: '데모바이어',
+      email: 'buyer@aisquare.com',
+      phone: '01099990000',
+      phoneVerified: true,
+    } as any,
+  });
+
+  // 어떤 상품들을 SOLD로 만들지: 다양한 seller에 걸쳐 12개 정도
+  const SOLD_PRODUCTS: { id: string; rating: number; content: string }[] = [
+    { id: 'p001', rating: 5, content: 'SNS 광고 카피 50종 진짜 알차요. 톤앤매너 시트가 특히 좋네요.' },
+    { id: 'p003', rating: 5, content: '키워드 분석이 한 번에 끝나서 시간 엄청 절약됩니다.' },
+    { id: 'p005', rating: 4, content: '시청률 유지율 실제로 올랐어요. 다만 후킹 패턴 더 다양했으면.' },
+    { id: 'p006', rating: 5, content: 'Midjourney 프롬프트 퀄리티 최고. 썸네일 클릭률 30% 상승.' },
+    { id: 'p009', rating: 5, content: 'Cursor + Claude 워크플로우 그대로 따라했더니 코드리뷰가 자동화됨.' },
+    { id: 'p010', rating: 5, content: 'API 문서 자동 생성 너무 편합니다. 팀에 바로 적용.' },
+    { id: 'p013', rating: 4, content: '브랜드 톤앤매너 정리 시트가 실무적이에요.' },
+    { id: 'p017', rating: 5, content: 'Notion 템플릿 30종 다 써먹을만 합니다.' },
+    { id: 'p025', rating: 5, content: 'Figma+MJ 워크플로우 정말 시간 절약됨.' },
+    { id: 'p033', rating: 5, content: 'SQL 최적화 100패턴이 진짜 실무 그 자체.' },
+    { id: 'p039', rating: 4, content: 'Notion AI 자동화 템플릿 활용도 좋네요.' },
+    { id: 'p056', rating: 5, content: '논문 요약/인용 Claude 프롬프트가 학부생한테 최고.' },
+  ];
+
+  let seededReviews = 0;
+  for (const so of SOLD_PRODUCTS) {
+    const prod = await prisma.product.findUnique({ where: { id: so.id } });
+    if (!prod) continue;
+
+    // 상품당 order는 unique (1:1). 기존 order 있으면 그것을 CONFIRMED로 승격, 없으면 demo buyer로 새로.
+    let order = await prisma.order.findUnique({ where: { productId: so.id } });
+    if (!order) {
+      if (prod.sellerId === buyer.id) continue;
+      try {
+        order = await prisma.order.create({
+          data: {
+            buyerId: buyer.id,
+            productId: so.id,
+            paymentMethod: 'SQUARE',
+            paymentAmount: Math.floor(prod.price * 1.05),
+            status: 'CONFIRMED',
+            autoConfirmAt: new Date(),
+            settledAt: new Date(),
+          },
+        });
+      } catch (e) { continue; }
+    } else if (order.status !== 'CONFIRMED') {
+      order = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'CONFIRMED', settledAt: new Date() },
+      });
+    }
+
+    await prisma.product.update({ where: { id: so.id }, data: { status: ProductStatus.SOLD } });
+
+    // 리뷰는 그 주문의 실제 buyer 명의로 (없으면 새로, 있으면 skip)
+    const existingReview = await prisma.review.findUnique({ where: { orderId: order.id } }).catch(() => null);
+    if (!existingReview) {
+      await prisma.review.create({
+        data: {
+          orderId: order.id,
+          productId: so.id,
+          reviewerId: order.buyerId,
+          rating: so.rating,
+          content: so.content,
+        },
+      });
+      seededReviews++;
+    }
+  }
+  console.log(`Marked ${SOLD_PRODUCTS.length} products as SOLD + ${seededReviews} reviews seeded.`);
 
   console.log(`Seeded ${sellers.length} sellers and ${products.length} products.`);
 }

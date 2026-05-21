@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -8,11 +8,13 @@ export class WishlistService {
   async add(userId: string, productId: string) {
     const product = await this.prisma.product.findUnique({ where: { id: productId } });
     if (!product || !product.isVisible) throw new NotFoundException('상품을 찾을 수 없습니다');
+    if (product.sellerId === userId) throw new BadRequestException('본인이 등록한 상품은 찜할 수 없습니다');
 
+    // idempotent
     const existing = await this.prisma.wishlist.findUnique({
       where: { userId_productId: { userId, productId } },
     });
-    if (existing) throw new ConflictException('이미 찜한 상품입니다');
+    if (existing) return { ...existing, alreadyExists: true };
 
     return this.prisma.wishlist.create({ data: { userId, productId } });
   }

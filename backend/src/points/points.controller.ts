@@ -73,4 +73,12 @@ export class PointsController {
   myExchanges(@Request() req) {
     return this.pointsService.getMyExchanges(req.user.id);
   }
+
+  // 네이버페이 → AISquare 입금 요청 (사용자가 신청, 관리자 승인 필요)
+  @Post('exchange-naver/from-naver')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: '네이버페이 포인트를 AISquare로 가져오기 요청 (관리자 승인 후 PAID 적립)' })
+  requestFromNaver(@Request() req, @Body() body: { amount: number }) {
+    return this.pointsService.requestFromNaver(req.user.id, body.amount);
+  }
 }

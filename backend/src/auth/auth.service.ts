@@ -155,6 +155,37 @@ export class AuthService {
     return this.sanitize(updated);
   }
 
+  async updateProfile(
+    userId: string,
+    dto: { nickname?: string; email?: string; bankName?: string; accountNumber?: string; accountHolder?: string },
+  ) {
+    const data: any = {};
+    if (dto.nickname !== undefined) {
+      const exists = await this.prisma.user.findFirst({
+        where: { nickname: dto.nickname, NOT: { id: userId } },
+      });
+      if (exists) throw new BadRequestException('이미 사용중인 닉네임입니다');
+      data.nickname = dto.nickname;
+    }
+    if (dto.email !== undefined) {
+      const exists = await this.prisma.user.findFirst({
+        where: { email: dto.email, NOT: { id: userId } },
+      });
+      if (exists) throw new BadRequestException('이미 사용중인 이메일입니다');
+      data.email = dto.email;
+    }
+    if (dto.bankName !== undefined) data.bankName = dto.bankName || null;
+    if (dto.accountNumber !== undefined) data.accountNumber = dto.accountNumber || null;
+    if (dto.accountHolder !== undefined) data.accountHolder = dto.accountHolder || null;
+
+    if (Object.keys(data).length === 0) {
+      const current = await this.prisma.user.findUnique({ where: { id: userId } });
+      return this.sanitize(current!);
+    }
+    const updated = await this.prisma.user.update({ where: { id: userId }, data });
+    return this.sanitize(updated);
+  }
+
   async getTokenHistory(userId: string) {
     return this.tokenService.getHistory(userId);
   }

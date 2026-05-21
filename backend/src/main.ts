@@ -25,6 +25,8 @@ async function bootstrap() {
       callback(new Error('CORS: origin not allowed → ' + origin), false);
     },
     credentials: true,
+    // FE가 다운로드 파일명 읽기 위해 Content-Disposition 노출 필요
+    exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
   });
 
   app.useGlobalPipes(

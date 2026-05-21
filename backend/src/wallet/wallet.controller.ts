@@ -4,6 +4,7 @@ import { WalletService } from './wallet.service';
 import { PrepareChargeDto } from './dto/prepare-charge.dto';
 import { ConfirmChargeDto } from './dto/confirm-charge.dto';
 import { InstantChargeDto } from './dto/instant-charge.dto';
+import { WithdrawDto } from './dto/withdraw.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PassVerifiedGuard } from '../auth/pass-verified.guard';
 
@@ -43,6 +44,13 @@ export class WalletController {
   @ApiOperation({ summary: 'Square 충전 내역 (walletCharge 레코드)' })
   getChargeHistory(@Request() req) {
     return this.walletService.getChargeHistory(req.user.id);
+  }
+
+  @Post('withdraw')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: 'Square 출금/환불 — 등록된 계좌로 송금 (Fabric 차감)' })
+  withdraw(@Request() req, @Body() dto: WithdrawDto) {
+    return this.walletService.withdraw(req.user.id, dto.squareAmount);
   }
 
   @Get('balance')

@@ -140,13 +140,16 @@
   }
 
   const auth = {
+    // register는 가입만 처리하고 자동 로그인하지 않음. BE에서 accessToken을 내려보내도
+    // 무시하고 사용자에게 로그인 페이지에서 명시적으로 로그인하도록 함.
     register: dispatch(
-      async (data) => persistAuth(await http('POST', '/auth/register', data)),
       async (data) => {
-        store.user = { id: 'u-' + Date.now(), ...data, passVerified: false };
-        delete store.user.password;
-        saveStore(store);
-        return mock({ user: store.user });
+        const resp = await http('POST', '/auth/register', data);
+        // 가입은 성공했지만 세션은 만들지 않음 — 이전 세션이 있었다면 그대로 보존.
+        return resp;
+      },
+      async (data) => {
+        return mock({ user: { id: 'u-' + Date.now(), ...data, passVerified: false } });
       }
     ),
     login: dispatch(
@@ -240,9 +243,19 @@
           const updated = await http('PATCH', '/auth/me/bio', { bio: data.bio });
           store.user = { ...(store.user || {}), ...updated };
           saveStore(store);
-        } else if (store.user) {
-          // BE has no general profile patch — apply locally
-          Object.assign(store.user, data); saveStore(store);
+        }
+        // nickname / email / 정산 계좌 (bankName, accountNumber, accountHolder)
+        // 변경은 BE의 PATCH /auth/me 호출
+        const patch = {};
+        if (data && typeof data.nickname !== 'undefined') patch.nickname = data.nickname;
+        if (data && typeof data.email !== 'undefined') patch.email = data.email;
+        if (data && typeof data.bankName !== 'undefined') patch.bankName = data.bankName;
+        if (data && typeof data.accountNumber !== 'undefined') patch.accountNumber = data.accountNumber;
+        if (data && typeof data.accountHolder !== 'undefined') patch.accountHolder = data.accountHolder;
+        if (Object.keys(patch).length > 0) {
+          const updated = await http('PATCH', '/auth/me', patch);
+          store.user = { ...(store.user || {}), ...updated };
+          saveStore(store);
         }
         return store.user;
       },
@@ -273,18 +286,35 @@
       async () => {
         const res = await safeLive(() => http('GET', '/wallet/history'), { items: [] });
         const items = Array.isArray(res?.items) ? res.items : [];
-        // Fabric의 WalletTx 형식 → UI가 기대하는 { id, type, amount, description, createdAt }
-        return { items: items.map(t => {
-          const rawMemo = t.memo || t.Memo || '';
-          const cleanMemo = rawMemo.replace(/\s*\(charge=[^)]+\)/g, '').trim();
-          return {
-            id: t.txId || t.TxID || '',
-            type: t.txType || t.TxType || 'DEPOSIT',
-            amount: Number(t.amount ?? t.Amount ?? 0),
-            description: cleanMemo || 'Square 거래',
-            createdAt: t.timestamp || t.Timestamp || new Date().toISOString(),
-          };
-        }) };
+        const mapped = items.map(t => ({
+          id: t.txId || t.TxID || '',
+          type: t.txType || t.TxType || 'DEPOSIT',
+          amount: Number(t.amount ?? t.Amount ?? 0),
+          description: (t.memo || t.Memo || '').trim() || 'Square 거래',
+          createdAt: t.timestamp || t.Timestamp || new Date().toISOString(),
+        }));
+        // 정산 계좌로 환불된 주문은 같은 액수의 "신고 환불"(+N)과 "정산 계좌로 환불 송금"(-N) 두 행이 생김.
+        // 잔액 변동은 net 0이지만 UI에는 후자 한 행만 노출 (전자는 숨김) — 깔끔한 거래내역.
+        const bankRefundOrderIds = new Set();
+        for (const it of mapped) {
+          const m = (it.description || '').match(/정산 계좌로 환불 송금:\s*order=([\w-]+)/);
+          if (m) bankRefundOrderIds.add(m[1]);
+        }
+        const filtered = mapped
+          .filter(it => {
+            const m = (it.description || '').match(/^신고 환불(?: 포인트 복구)?:\s*order=([\w-]+)/);
+            if (m && bankRefundOrderIds.has(m[1])) return false;
+            return true;
+          })
+          .map(it => {
+            // 정산 계좌로 송금된 환불은 사용자 입장에서 "받은 돈"이므로 표시 부호 반전.
+            // (체인코드 원장상 Square 차감(-)이지만 UX는 +로 노출)
+            if (/정산 계좌로 환불 송금/.test(it.description) && it.amount < 0) {
+              return { ...it, amount: Math.abs(it.amount) };
+            }
+            return it;
+          });
+        return { items: filtered };
       },
       async () => mock({ items: store.squareHistory }),
     ),
@@ -317,11 +347,12 @@
         const res = await safeLive(() => http('GET', '/points/history' + qs(params)), { items: [] });
         const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
         // PointLog → UI({ id, type, amount, description, createdAt }) 매핑
+        // raw memo를 그대로 넘기고 표시 직전에 prettifyHistoryDescription()이 처리.
         return { items: items.map(p => ({
           id: p.id,
           type: p.type,
           amount: Number(p.amount || 0),
-          description: p.memo || p.type,
+          description: (p.memo || '').trim() || p.type || '',
           createdAt: p.createdAt,
           category: p.category,
         })) };
@@ -446,9 +477,13 @@
     if (!p) return p;
     let tags = p.tags;
     if (typeof tags === 'string') { try { tags = JSON.parse(tags); } catch { tags = tags.split(','); } }
+    // 이미지: BE의 imageUrl(CloudFront signed) 최우선 → cover → imageKey의 assets/ 부분 → fallback.
+    // cover에 절대 URL (http/https) 들어가면 product.html이 './assets/' prefix 안 붙이도록 분기.
+    const _absUrl = p.imageUrl || (p.cover && /^https?:\/\//i.test(p.cover) ? p.cover : null);
     return {
       ...p,
-      cover: p.cover || (p.imageKey || '').replace(/^assets\//, '') || 'cover-01.svg',
+      cover: _absUrl || p.cover || (p.imageKey || '').replace(/^assets\//, '') || 'cover-01.svg',
+      imageUrl: _absUrl,
       priceSquare: p.priceSquare ?? p.price ?? 0,
       rating: p.rating ?? p.avgRating ?? 0,
       reviewCount: p.reviewCount ?? 0,
@@ -511,8 +546,53 @@
     ),
   };
   const sellers = {
-    list:    dispatch((params) => http('GET', '/sellers' + qs(params)), async () => mock({ items: store.sellers })),
-    get:     dispatch((un)     => http('GET', `/sellers/${un}`),         async (un) => mock(store.sellers.find(s => s.username === un))),
+    // 판매자 랭킹: BE의 /products/sellers/ranking (별점·판매수·신뢰토큰 기반) 사용
+    list: dispatch(
+      async (_params) => {
+        try {
+          const res = await http('GET', '/products/sellers/ranking?limit=100');
+          const items = (res && res.items) ? res.items : [];
+          return { items };
+        } catch (e) {
+          // 폴백: /products로부터 클라이언트 집계
+          const res = await http('GET', '/products?limit=500');
+          const items = (res && res.items) ? res.items : [];
+          const map = new Map();
+          for (const p of items) {
+            const seller = p.seller || {};
+            const un = seller.username || p.sellerUsername || '';
+            if (!un) continue;
+            const cur = map.get(un) || {
+              username: un,
+              name: seller.name || p.sellerName || un,
+              productCount: 0, sold: 0,
+              ratingSum: 0, ratingW: 0,
+              reviewCount: 0,
+            };
+            cur.productCount += 1;
+            if (p.status === 'SOLD') cur.sold += 1;
+            const rc = Number(p.reviewCount || 0);
+            const ar = Number(p.avgRating || p.rating || 0);
+            cur.reviewCount += rc;
+            if (rc > 0 && ar > 0) { cur.ratingSum += ar * rc; cur.ratingW += rc; }
+            map.set(un, cur);
+          }
+          const list = [...map.values()].map(s => ({
+            username: s.username, name: s.name,
+            sold: s.sold,
+            rating: s.ratingW > 0 ? s.ratingSum / s.ratingW : 0,
+            reviewCount: s.reviewCount,
+            productCount: s.productCount,
+            trustToken: 10,
+            tokenPct: 100,
+          }));
+          list.sort((a, b) => (b.sold - a.sold) || (b.rating - a.rating) || (b.reviewCount - a.reviewCount));
+          return { items: list };
+        }
+      },
+      async () => mock({ items: store.sellers })
+    ),
+    get: dispatch((un) => http('GET', `/sellers/${un}`), async (un) => mock(store.sellers.find(s => s.username === un))),
   };
 
   // ── Toss Payments ─────────────────────────────────────────────────

@@ -93,11 +93,11 @@ export class PaymentsService {
         await tx.pointLog.create({
           data: {
             userId,
-            type: 'EARN_ACTIVITY',  // 충전 보너스는 활동 포인트 (이벤트성)
-            category: 'ACTIVITY',
+            type: 'EARN_BONUS',  // 충전 보너스도 결제 포인트 (외부 전환 가능)
+            category: 'PAID',
             amount: bonusRp,
             balance: afterCharge + bonusRp,
-            memo: `충전 적립 보너스 ${bonusRp} RP (ACTIVITY)`,
+            memo: `충전 적립 보너스 ${bonusRp} RP (PAID)`,
           },
         });
       }
@@ -105,6 +105,10 @@ export class PaymentsService {
 
     await this.fabric.issuePoints(userId, rpAmount + bonusRp, `충전 ${dto.orderId}`).catch(
       (e) => this.logger.warn('Fabric issuePoints 실패 (무시)', e?.message),
+    );
+    // naver-channel PAID 잔액에도 동기화 (외부 전환 가능하게 만들기 위함)
+    await this.fabric.issuePaid(userId, rpAmount + bonusRp, `토스 충전 ${dto.orderId}`).catch(
+      (e) => this.logger.warn('Fabric IssuePaid 실패 (체인-DB 불일치)', e?.message),
     );
 
     return { success: true, rpCharged: rpAmount, bonusRp };
@@ -120,8 +124,8 @@ export class PaymentsService {
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
     if (product.sellerId === buyerId) throw new BadRequestException('본인 상품은 구매할 수 없습니다');
 
-    // 새 정책: 구매자가 표시 가격 위에 5% 추가 결제 (판매자도 5% 부담, 각 2% Square 캐시백)
-    const amountKrw = Math.floor(product.price * 1.05);
+    // Toss(현금) 결제는 5% 거래 수수료 + 10% 현금↔Square 환산 수수료 둘 다 부과 = price × 1.05 × 1.10
+    const amountKrw = Math.floor(Math.floor(product.price * 1.05) * 1.10);
     const priceRp = Math.floor((amountKrw * 100) / KRW_PER_100RP);
     const tossOrderId = `prod-${uuidv4()}`;
 

@@ -6,6 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyPhoneDto } from './dto/verify-phone.dto';
 import { UpdateBioDto } from './dto/update-bio.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -52,6 +53,14 @@ export class AuthController {
   @ApiOperation({ summary: '소개글 수정 (본인만)' })
   updateBio(@Request() req, @Body() dto: UpdateBioDto) {
     return this.authService.updateBio(req.user.id, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @ApiOperation({ summary: '프로필 수정 (닉네임/이메일, 본인만)' })
+  updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.id, dto);
   }
 
   @ApiBearerAuth()

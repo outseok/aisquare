@@ -39,6 +39,12 @@ export class ProductsController {
     return this.productsService.findAll(query);
   }
 
+  @Get('sellers/ranking')
+  @ApiOperation({ summary: '판매자 랭킹 (별점·판매수·신뢰토큰 기준)' })
+  getSellersRanking(@Query('limit') limit?: string) {
+    return this.productsService.getSellersRanking(limit ? Number(limit) : 50);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '상품 상세 조회 (비회원 가능)' })
   findOne(@Param('id') id: string) {

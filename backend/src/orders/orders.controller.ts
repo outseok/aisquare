@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Param, Body, UseGuards, Request, Res, BadRequestException } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -64,8 +65,28 @@ export class OrdersController {
 
   @Get(':id/download')
   @UseGuards(PassVerifiedGuard)
-  @ApiOperation({ summary: '파일 다운로드 URL 발급' })
+  @ApiOperation({ summary: '파일 다운로드 URL 발급 (JSON 응답)' })
   getDownloadUrl(@Param('id') id: string, @Request() req) {
     return this.ordersService.getDownloadUrl(id, req.user.id);
+  }
+
+  // 모든 확장자 다운로드를 위해 BE가 직접 스트리밍 — CloudFront cross-origin download 우회
+  // 주의: PassVerifiedGuard 안 씀 (이미 구매 완료한 주문이므로 재차 PASS 강제하지 않음)
+  @Get(':id/download/file')
+  @ApiOperation({ summary: '실제 파일 바이너리 스트리밍 (모든 확장자 다운로드)' })
+  async downloadFile(@Param('id') id: string, @Request() req, @Res() res: Response) {
+    try {
+      const { buf, contentType, filename } = await this.ordersService.streamDownload(id, req.user.id);
+      const encoded = encodeURIComponent(filename);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', String(buf.length));
+      res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.end(buf);
+    } catch (err: any) {
+      console.error(`[DOWNLOAD] order=${id} user=${req.user?.id} err=${err?.message}`);
+      const status = err?.status || 500;
+      res.status(status).json({ message: err?.message || 'download failed', orderId: id });
+    }
   }
 }

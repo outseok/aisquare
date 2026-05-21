@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>네이버페이 관리자 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      body { background: #f8f9fb; }
+      .npa-hdr {
+        background: linear-gradient(135deg, #03C75A 0%, #028a43 100%);
+        color: #fff; padding: 36px 0;
+      }
+      .npa-hdr .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 18px; justify-content: space-between; }
+      .npa-hdr h1 { margin: 0; font-size: 24px; letter-spacing: -0.4px; display: flex; align-items: center; gap: 14px; }
+      .npa-hdr .nlogo {
+        width: 42px; height: 42px; border-radius: 11px; background: #fff; color: #03C75A;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 900; font-size: 22px; letter-spacing: -1px;
+      }
+      .npa-hdr .meta { font-size: 12.5px; opacity: 0.88; }
+      .npa-hdr .meta b { font-weight: 800; }
+      .npa-hdr .logout {
+        background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3);
+        padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 12.5px;
+        cursor: pointer; font: inherit;
+      }
+      .npa-hdr .logout:hover { background: rgba(255,255,255,0.25); }
+
+      .npa-section { padding: 36px 0 96px; }
+      .npa-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+      .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+      .stat-card { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 22px 24px; }
+      .stat-card .lbl { color: #87909d; font-size: 12.5px; font-weight: 800; letter-spacing: 0.04em; }
+      .stat-card .val { margin-top: 8px; font-size: 28px; font-weight: 900; color: #1f2a38; letter-spacing: -0.3px; }
+      .stat-card .val em { font-style: normal; font-size: 13px; color: #677181; font-weight: 700; margin-left: 4px; }
+      .stat-card.pending .val { color: #b87705; }
+      .stat-card.confirmed .val { color: #1f8a5b; }
+      .stat-card.rejected .val { color: #c8331f; }
+
+      .tbl-wrap { background: #fff; border: 1px solid #ececf0; border-radius: 14px; overflow: hidden; }
+      .tbl-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #ececf0; }
+      .tbl-head h2 { margin: 0; font-size: 17px; }
+      .tbl-head .sub { font-size: 12.5px; color: #677181; }
+      table.npa { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+      table.npa th { text-align: left; background: #f8f9fb; padding: 12px 16px; color: #677181; font-weight: 800; font-size: 12.5px; letter-spacing: 0.04em; border-bottom: 1px solid #ececf0; }
+      table.npa td { padding: 14px 16px; border-bottom: 1px solid #f1f3f6; color: #1f2a38; }
+      table.npa tr:last-child td { border-bottom: 0; }
+      table.npa tr:hover td { background: #fafbfc; }
+      table.npa .id { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: #87909d; }
+      table.npa .amt { font-variant-numeric: tabular-nums; font-weight: 800; }
+      table.npa .status {
+        display: inline-flex; padding: 4px 10px; border-radius: 999px;
+        font-size: 11.5px; font-weight: 800;
+      }
+      table.npa .status.pending   { background: #fef6e0; color: #b87705; }
+      table.npa .status.confirmed { background: #def8ea; color: #1f8a5b; }
+      table.npa .status.rejected  { background: #ffe3d6; color: #c8331f; }
+      table.npa .btn {
+        padding: 6px 12px; border: 1px solid #d4dae4; background: #fff; border-radius: 6px;
+        font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; color: #1f2a38; margin-right: 4px;
+      }
+      table.npa .btn.confirm { color: #1f8a5b; border-color: #b8e6cb; }
+      table.npa .btn.reject  { color: #c8331f; border-color: #f3c8c1; }
+      table.npa .btn:hover { background: #f4f6fa; }
+      .npa-empty { padding: 60px 0; text-align: center; color: #87909d; font-size: 14px; }
+
+      .gate {
+        background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 60px 40px; text-align: center;
+      }
+      .gate h2 { margin: 0 0 8px; font-size: 22px; }
+      .gate p  { margin: 0 0 18px; color: #677181; font-size: 14px; }
+      .gate a { display: inline-block; padding: 12px 22px; background: #03C75A; color: #fff; border-radius: 8px; font-weight: 800; font-size: 14px; text-decoration: none; }
+
+      .toast {
+        position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
+        padding: 12px 18px; background: #1f2a38; color: #fff; border-radius: 999px;
+        font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none;
+        transition: opacity .15s, transform .15s; z-index: 9999;
+      }
+      .toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Naver Admin">
+    <header class="npa-hdr">
+      <div class="wrap">
+        <h1>
+          <span class="nlogo">N</span>
+          NaverPay 관리자 콘솔
+        </h1>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="meta" id="npaMe">로그인 정보 불러오는 중...</div>
+          <button class="logout" id="npaLogout">로그아웃</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="npa-section">
+      <div class="npa-wrap" id="npaRoot">
+        <div class="npa-empty">불러오는 중...</div>
+      </div>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=20260524a"></script>
+    <script>
+      (async function() {
+        const api = window.AISquareAPI;
+        const root = document.getElementById('npaRoot');
+        const meBox = document.getElementById('npaMe');
+        const toastEl = document.getElementById('toast');
+        let toastTimer = null;
+        function t(msg) {
+          if (!toastEl || !msg) return;
+          toastEl.textContent = msg;
+          toastEl.classList.add('is-visible');
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), 2200);
+        }
+        function escapeHtml(s) {
+          return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function fmtDate(s) {
+          if (!s) return '-';
+          try { return new Date(s).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+          catch { return s; }
+        }
+        const n = (v) => Number(v || 0).toLocaleString();
+
+        document.getElementById('npaLogout').addEventListener('click', () => {
+          api.setJwt(null);
+          try { localStorage.removeItem('aisquare-mock-store-v2'); } catch {}
+          location.href = './login.html';
+        });
+
+        // 권한 체크
+        if (!api.isLoggedIn() || !api.getJwt()) {
+          root.innerHTML = `
+            <div class="gate">
+              <h2>네이버페이 관리자 로그인 필요</h2>
+              <p>NaverPay MSP 자격으로 서명할 수 있는 관리자 계정으로 로그인하세요.</p>
+              <a href="./login.html?next=naver-admin.html">로그인</a>
+            </div>`;
+          return;
+        }
+        const me = api.getCurrentUser() || {};
+        if (!me.isNaverAdmin) {
+          root.innerHTML = `
+            <div class="gate">
+              <h2>접근 권한 없음</h2>
+              <p>이 콘솔은 NaverPay 관리자(isNaverAdmin=true)만 사용할 수 있습니다.</p>
+              <a href="./index.html">홈으로</a>
+            </div>`;
+          return;
+        }
+        meBox.innerHTML = `<b>${escapeHtml(me.nickname || me.name || me.username)}</b> · @${escapeHtml(me.username)} · NaverPayMSP`;
+
+        async function fetchJson(path) {
+          const r = await fetch(api.API_BASE + path, { headers: { Authorization: 'Bearer ' + api.getJwt() } });
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || r.statusText);
+          return r.json();
+        }
+        async function post(path, body) {
+          const r = await fetch(api.API_BASE + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.getJwt() },
+            body: JSON.stringify(body || {}),
+          });
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || r.statusText);
+          return r.json();
+        }
+
+        async function load() {
+          root.innerHTML = '<div class="npa-empty">불러오는 중...</div>';
+          try {
+            const [summary, list] = await Promise.all([
+              fetchJson('/naver-admin/summary'),
+              fetchJson('/naver-admin/exchanges'),
+            ]);
+            render(summary, list);
+          } catch (e) {
+            root.innerHTML = `<div class="npa-empty">로드 실패: ${escapeHtml(e.message)}</div>`;
+          }
+        }
+
+        function render(summary, list) {
+          const pending = list.filter(r => r.status === 'PENDING');
+          const others  = list.filter(r => r.status !== 'PENDING');
+          root.innerHTML = `
+            <div class="stat-grid">
+              <div class="stat-card pending">
+                <div class="lbl">서명 대기 (PENDING)</div>
+                <div class="val">${n(summary.pending)}<em>건</em></div>
+              </div>
+              <div class="stat-card confirmed">
+                <div class="lbl">승인 완료</div>
+                <div class="val">${n(summary.confirmed)}<em>건</em></div>
+              </div>
+              <div class="stat-card rejected">
+                <div class="lbl">거부</div>
+                <div class="val">${n(summary.rejected)}<em>건</em></div>
+              </div>
+            </div>
+
+            <div class="tbl-wrap" style="margin-bottom:24px">
+              <div class="tbl-head">
+                <h2>서명 대기 중인 전환 요청</h2>
+                <span class="sub">NaverPayMSP로 서명하면 체인코드 ConfirmNaverExchange가 실행됩니다.</span>
+              </div>
+              ${pending.length === 0
+                ? '<div class="npa-empty">대기 중인 전환 요청이 없습니다.</div>'
+                : `<table class="npa">
+                    <thead><tr><th>요청 ID</th><th>사용자</th><th>전환 금액</th><th>지급 NPoint</th><th>요청 일시</th><th>처리</th></tr></thead>
+                    <tbody>${pending.map(rowHtml).join('')}</tbody>
+                  </table>`}
+            </div>
+
+            <div class="tbl-wrap">
+              <div class="tbl-head">
+                <h2>처리 완료 / 거부 내역</h2>
+                <span class="sub">최근 ${others.length}건</span>
+              </div>
+              ${others.length === 0
+                ? '<div class="npa-empty">기록이 없습니다.</div>'
+                : `<table class="npa">
+                    <thead><tr><th>요청 ID</th><th>사용자</th><th>금액</th><th>네이버 TX</th><th>처리 일시</th><th>상태</th></tr></thead>
+                    <tbody>${others.map(rowHtmlDone).join('')}</tbody>
+                  </table>`}
+            </div>
+          `;
+          root.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', onAction));
+        }
+
+        function rowHtml(r) {
+          return `<tr>
+            <td><span class="id">${escapeHtml(r.id.slice(0, 12))}…</span></td>
+            <td><span class="id">${escapeHtml((r.userId || '').slice(0, 10))}…</span></td>
+            <td class="amt">${n(r.amountPaid || r.paidPointAmount || 0)} <span style="color:#87909d;font-weight:700">P</span></td>
+            <td class="amt">${n(r.naverPointAmount || r.amountPaid || 0)} <span style="color:#87909d;font-weight:700">NP</span></td>
+            <td>${fmtDate(r.createdAt)}</td>
+            <td>
+              <button class="btn confirm" data-act="confirm" data-id="${r.id}">서명·승인</button>
+              <button class="btn reject"  data-act="reject"  data-id="${r.id}">거부</button>
+            </td>
+          </tr>`;
+        }
+        function rowHtmlDone(r) {
+          const cls = r.status === 'CONFIRMED' ? 'confirmed' : 'rejected';
+          return `<tr>
+            <td><span class="id">${escapeHtml(r.id.slice(0, 12))}…</span></td>
+            <td><span class="id">${escapeHtml((r.userId || '').slice(0, 10))}…</span></td>
+            <td class="amt">${n(r.amountPaid || r.paidPointAmount || 0)} P</td>
+            <td><span class="id">${escapeHtml(r.naverTxId || '-')}</span></td>
+            <td>${fmtDate(r.updatedAt || r.createdAt)}</td>
+            <td><span class="status ${cls}">${escapeHtml(r.status)}</span></td>
+          </tr>`;
+        }
+
+        async function onAction(e) {
+          const btn = e.currentTarget;
+          const id = btn.dataset.id;
+          const act = btn.dataset.act;
+          try {
+            if (act === 'confirm') {
+              if (!confirm('이 요청을 NaverPayMSP로 서명·승인하시겠습니까?')) return;
+              btn.disabled = true;
+              const r = await post(`/naver-admin/exchanges/${id}/confirm`, {});
+              t(`승인 완료 — Naver TX: ${(r.naverTxId || '').slice(0, 20)}…`);
+            } else {
+              const reason = prompt('거부 사유를 입력하세요', '한도 초과');
+              if (reason === null) return;
+              btn.disabled = true;
+              await post(`/naver-admin/exchanges/${id}/reject`, { reason });
+              t('거부 처리 완료 — 사용자 PAID 환불됨');
+            }
+            load();
+          } catch (err) {
+            t(err.message || '처리 실패');
+            btn.disabled = false;
+          }
+        }
+
+        load();
+      })();
+    </script>
+  </body>
+</html>

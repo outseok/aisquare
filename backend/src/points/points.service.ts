@@ -53,7 +53,27 @@ export class PointsService {
       );
     }
 
+    // 멱등성 가드 — 같은 사용자가 같은 금액으로 5초 안에 중복 요청 시 차단
+    const since = new Date(Date.now() - 5_000);
+    const dupRecent = await this.prisma.naverPointExchange.findFirst({
+      where: {
+        userId,
+        amountPaid: amount,
+        status: 'PENDING',
+        direction: { in: ['AISQUARE_TO_NAVER', 'TO_NAVER'] },
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (dupRecent) {
+      throw new BadRequestException('직전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+
     const exchangeId = 'ex-' + uuidv4();
+
+    // 환율 0.9 적용 — 100 PAID → 90 NaverPoint
+    const NAVER_RATE = 0.9;
+    const naverPointAmount = Math.floor(amount * NAVER_RATE);
 
     // 1) DB에 PENDING 기록
     const record = await this.prisma.naverPointExchange.create({
@@ -61,6 +81,9 @@ export class PointsService {
         id: exchangeId,
         userId,
         amountPaid: amount,
+        paidPointAmount: amount,
+        naverPointAmount,
+        exchangeRate: NAVER_RATE,
         direction: 'AISQUARE_TO_NAVER',
         status: 'PENDING',
       },
@@ -75,7 +98,7 @@ export class PointsService {
         category: 'PAID',
         amount: -amount,
         balance: balanceAll - amount,
-        memo: `네이버페이 전환 ${amount} RP → ${(amount).toLocaleString()} NaverPoint`,
+        memo: `AISquare → 네이버페이 전환: ${amount.toLocaleString()} P → ${naverPointAmount.toLocaleString()} NP`,
         exchangeId,
       },
     });
@@ -111,6 +134,57 @@ export class PointsService {
     } catch (e: any) { this.logger.debug(`Slack notify skipped: ${e?.message}`); }
 
     return { exchangeId, amount, status: 'PENDING', message: 'NaverPay 측에서 적립 확정 시 CONFIRMED로 변경됩니다.' };
+  }
+
+  // 네이버페이 → AISquare 입금 요청 (관리자 승인 필요)
+  // 환율 0.9 적용: 100 NaverPoint → 90 PAID
+  async requestFromNaver(userId: string, naverAmount: number) {
+    if (!naverAmount || naverAmount <= 0) {
+      throw new BadRequestException('가져오기 금액이 잘못됐습니다.');
+    }
+    if (naverAmount < 100) {
+      throw new BadRequestException('최소 100 NaverPoint부터 가능합니다.');
+    }
+
+    const NAVER_RATE = 0.9;
+    const paidPointAmount = Math.floor(naverAmount * NAVER_RATE);
+
+    // 멱등성 가드 — 같은 사용자가 같은 금액으로 5초 안에 중복 요청 시 차단
+    const since = new Date(Date.now() - 5_000);
+    const dupRecent = await this.prisma.naverPointExchange.findFirst({
+      where: {
+        userId,
+        naverPointAmount: naverAmount,
+        status: 'PENDING',
+        direction: { in: ['FROM_NAVER', 'NAVER_TO_AISQUARE'] },
+        createdAt: { gte: since },
+      },
+    });
+    if (dupRecent) {
+      throw new BadRequestException('직전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+
+    const exchangeId = 'ex-' + uuidv4();
+    const record = await this.prisma.naverPointExchange.create({
+      data: {
+        id: exchangeId,
+        userId,
+        amountPaid: 0,
+        paidPointAmount,
+        naverPointAmount: naverAmount,
+        exchangeRate: NAVER_RATE,
+        direction: 'FROM_NAVER',
+        status: 'PENDING',
+      },
+    });
+
+    return {
+      exchangeId,
+      naverPointAmount: naverAmount,
+      paidPointAmount,
+      status: 'PENDING',
+      message: 'AISquare 관리자가 검토 후 적립 처리합니다.',
+    };
   }
 
   // NaverPay가 확정 호출 (보통 webhook). dev에서는 admin이 수동.

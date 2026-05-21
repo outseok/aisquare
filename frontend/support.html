@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>고객 지원 — AISquare</title>
-    <link rel="stylesheet" href="./styles.css?v=1779353750" />
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
     <script>
       (function () {
         try {
@@ -12,6 +12,28 @@
           var u = s && JSON.parse(s).user;
           if (u) document.documentElement.classList.add('aisq-loggedin');
           if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
         } catch (e) {}
       })();
     </script>
@@ -65,7 +87,7 @@
     <header class="answer-header">
       <div class="answer-wrap">
         <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
-          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
         </a>
         <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
           <a href="./index.html" data-tab="home">홈</a>
@@ -93,8 +115,8 @@
             <span class="pending-badge hidden" id="hdrAdminBadge"></span>
           </a>
           <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
-            <span class="avatar" id="hdrAvatar">U</span>
-            <span class="name" id="hdrName">사용자</span>
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
           </a>
           <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
           <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
@@ -178,7 +200,7 @@
     <footer class="kmong-footer">
       <div class="kmong-wrap">
         <div class="footer-bottom">
-          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
         </div>
         <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
       </div>
@@ -186,8 +208,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779353750"></script>
-    <script src="./app.js?v=1779353750"></script>
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
     <script>
       (function() {
         var tabs = document.querySelectorAll('#supTabs a');

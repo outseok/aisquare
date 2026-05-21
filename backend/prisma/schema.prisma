@@ -18,6 +18,7 @@ model User {
   phoneVerified    Boolean    @default(false)
   emailVerified    Boolean    @default(false)
   isAdmin          Boolean    @default(false)
+  isNaverAdmin     Boolean    @default(false)
   status           UserStatus @default(ACTIVE)
   trustToken       Float      @default(10)
   bio              String?  @db.Text
@@ -26,6 +27,10 @@ model User {
   passVerifiedAt   DateTime?
   squareWalletAddr String?
   pointWalletAddr  String?
+  // 정산 계좌 (출금/환불용)
+  bankName         String?
+  accountNumber    String?
+  accountHolder    String?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
@@ -147,6 +152,8 @@ model PointLog {
   category  PointCategory @default(ACTIVITY)
   amount    Int
   balance   Int
+  // PAID 포인트 누적 (NaverPay 전환 가능). ACTIVITY는 balance - paidBalance.
+  paidBalance Int @default(0)
   memo      String?
   // 네이버 전환 시 해당 Exchange 레코드 ID
   exchangeId String?
@@ -158,18 +165,24 @@ model PointLog {
 }
 
 model NaverPointExchange {
-  id            String   @id @default(cuid())
-  userId        String
-  amountPaid    Int      // 차감된 AISquare PAID 포인트
-  direction     String   // "AISQUARE_TO_NAVER" or "NAVER_TO_AISQUARE"
-  status        String   @default("PENDING") // PENDING / CONFIRMED / REJECTED
-  naverTxId     String?  // 네이버 측 트랜잭션 ID
-  fabricTxId    String?  // 체인코드 호출 TxID
-  rejectReason  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String
+  // 레거시 호환
+  amountPaid       Int      @default(0)
+  // 새 필드 (JC 호환)
+  direction        String   // "TO_NAVER" | "FROM_NAVER" (구버전 "AISQUARE_TO_NAVER" / "NAVER_TO_AISQUARE"도 허용)
+  paidPointAmount  Int      @default(0)
+  naverPointAmount Int      @default(0)
+  exchangeRate     Float    @default(1.0)
+  status           String   @default("PENDING") // PENDING / COMPLETED / REJECTED
+  naverTxId        String?
+  fabricTxId       String?
+  rejectReason     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([userId])
+  @@index([naverTxId])
   @@map("naver_point_exchanges")
 }
 

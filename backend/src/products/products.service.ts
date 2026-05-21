@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto, SortOrder } from './dto/query-product.dto';
@@ -8,7 +9,25 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private filesService: FilesService,
+  ) {}
+
+  /**
+   * imageKey → 클라이언트가 바로 <img src>로 쓸 수 있는 URL.
+   * - "assets/..." : 시드 데이터 (정적 자산) → null (frontend가 ./assets/cover-XX.svg fallback)
+   * - "uploads/..." : S3 업로드 자산 → CloudFront signed URL (1시간)
+   */
+  private async resolveImageUrl(imageKey: string | null | undefined): Promise<string | null> {
+    if (!imageKey) return null;
+    if (imageKey.startsWith('assets/')) return null;
+    try {
+      return await this.filesService.getPresignedDownloadUrl(imageKey, 3600);
+    } catch (e) {
+      return null;
+    }
+  }
 
   async create(
     sellerId: string,
@@ -47,7 +66,8 @@ export class ProductsService {
 
     const where: Prisma.ProductWhereInput = {
       isVisible: true,
-      status: 'ON_SALE',
+      // SOLD도 포함 — 마켓 카드 회색조 + 판매자 페이지에서 리뷰 표시. 실제 구매 차단은 order create 단에서.
+      status: { in: ['ON_SALE', 'SOLD'] },
       ...(fileType && { fileType }),
       ...(search && {
         OR: [
@@ -89,17 +109,21 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
 
-    return {
-      items: items.map((p) => ({
+    const mapped = await Promise.all(
+      items.map(async (p) => ({
         ...p,
         avgRating:
           p.reviews.length > 0
             ? p.reviews.reduce((sum, r) => sum + r.rating, 0) / p.reviews.length
             : 0,
         reviewCount: p._count.reviews,
+        imageUrl: await this.resolveImageUrl(p.imageKey),
         reviews: undefined,
         _count: undefined,
       })),
+    );
+    return {
+      items: mapped,
       total,
       page: page || 1,
       totalPages: Math.ceil(total / (limit || 20)),
@@ -132,7 +156,95 @@ export class ProductsService {
         ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length
         : 0;
 
-    return { ...product, avgRating, reviewCount: product._count.reviews, _count: undefined };
+    return {
+      ...product,
+      avgRating,
+      reviewCount: product._count.reviews,
+      imageUrl: await this.resolveImageUrl(product.imageKey),
+      _count: undefined,
+    };
+  }
+
+  /**
+   * 판매자 랭킹 — 판매 수 / 별점 / 신뢰토큰 / 매출 가중 점수
+   * score = sold×120 + ratingWeighted×40 + trust×3 + revenue/1000 + reviewCount×1
+   * (별점은 리뷰 5건 미만이면 가중치 절반)
+   */
+  async getSellersRanking(limit = 50) {
+    const sellers = await this.prisma.user.findMany({
+      where: { products: { some: {} }, status: 'ACTIVE', isAdmin: false },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        nickname: true,
+        trustToken: true,
+        createdAt: true,
+        products: {
+          select: { id: true, status: true, _count: { select: { reviews: true } } },
+        },
+      },
+    });
+
+    const rows = await Promise.all(
+      sellers.map(async (s) => {
+        const productCount = s.products.length;
+        const soldCount = s.products.filter((p) => p.status === 'SOLD').length;
+        const reviewCount = s.products.reduce((a, p) => a + p._count.reviews, 0);
+
+        const reviews = await this.prisma.review.findMany({
+          where: { product: { sellerId: s.id } },
+          select: { rating: true },
+        });
+        const avgRating =
+          reviews.length > 0
+            ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+            : 0;
+
+        // 확정·정산 완료된 주문의 결제 금액 합 (매출)
+        const revenueAgg = await this.prisma.order.aggregate({
+          where: {
+            product: { sellerId: s.id },
+            status: { in: ['CONFIRMED', 'PENDING_CONFIRMATION', 'SETTLEMENT_HOLD'] },
+          },
+          _sum: { paymentAmount: true },
+        });
+        const revenue = Number(revenueAgg._sum.paymentAmount || 0);
+
+        const ratingWeighted = reviewCount >= 5 ? avgRating : avgRating * 0.5;
+        const score =
+          soldCount * 120 +
+          ratingWeighted * 40 +
+          (s.trustToken || 0) * 3 +
+          revenue / 1000 +
+          reviewCount * 1;
+
+        return {
+          username: s.username,
+          name: s.name,
+          nickname: s.nickname,
+          trustToken: Number((s.trustToken || 0).toFixed(1)),
+          tokenPct: Math.max(0, Math.min(100, (s.trustToken || 0) * 10)),
+          productCount,
+          sold: soldCount,
+          reviewCount,
+          rating: Number(avgRating.toFixed(2)),
+          revenue,
+          joinedAt: s.createdAt,
+          score: Number(score.toFixed(2)),
+        };
+      }),
+    );
+
+    rows.sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.sold - a.sold ||
+        b.rating - a.rating ||
+        b.trustToken - a.trustToken,
+    );
+
+    return { items: rows.slice(0, limit), total: rows.length };
   }
 
   async getSellerStats(username: string) {
@@ -197,7 +309,7 @@ export class ProductsService {
     });
     const balance = (latest?.balance || 0) + amount;
     await this.prisma.pointLog.create({
-      data: { userId, type: 'EARN_BONUS', amount, balance, memo },
+      data: { userId, type: 'EARN_BONUS', category: 'ACTIVITY', amount, balance, memo },
     });
   }
 

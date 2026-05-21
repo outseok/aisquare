@@ -118,10 +118,17 @@ npm run seed          # 시드 데이터 + 기본 관리자 계정 생성
 npx nest start
 ```
 
-> **🛡 기본 관리자 계정** (즉시 admin.html 사용 가능)
-> - username: `admin`
-> - password: `admin123`
-> - **운영 전 반드시 비밀번호 변경**. 또는 `.env`의 `ADMIN_USERNAMES`를 자기 username으로 바꿔 다시 가입.
+> **🧪 시드가 만드는 계정** (`npm run seed` 후 즉시 사용 가능)
+>
+> | 용도 | username | password | 접근 |
+> |---|---|---|---|
+> | 일반 관리자 | `admin` | `admin123` | admin.html 콘솔 |
+> | 네이버페이 관리자 | `naver-admin` | `admin123` | naver-admin.html 콘솔 |
+> | 일반 테스트 사용자 | `2222` | `22222222` | 구매·판매·환불 데모 |
+> | 데모 구매자 | `demo.buyer` | `seedpass` | SOLD 주문/리뷰의 buyer |
+> | 50명 판매자 | (각 username 참조) | `seedpass` | 80개 상품 카탈로그 |
+>
+> **운영 전 반드시 비밀번호 변경**. 또는 `.env`의 `ADMIN_USERNAMES`를 자기 username으로 바꿔 다시 가입.
 
 `[FabricService] Fabric Gateway 연결 성공` 로그가 뜨면 BE가 진짜 peer에 연결된 것.
 
