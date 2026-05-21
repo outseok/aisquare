@@ -91,6 +91,25 @@ export class PointsService {
       this.logger.warn(`Fabric exchangeToNaver 실패 (DB만 기록): ${e?.message}`);
     }
 
+    // 4) Slack 알림 (관리자가 즉시 인지하도록)
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { username: true, nickname: true } });
+      const url = process.env.SLACK_WEBHOOK_URL;
+      if (url) {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: `:recycle: *NaverPay 포인트 전환 요청*\n` +
+                  `사용자: ${user?.nickname || ''} (@${user?.username || userId})\n` +
+                  `금액: *${amount.toLocaleString()} PAID* → 네이버페이\n` +
+                  `Exchange ID: \`${exchangeId}\`\n` +
+                  `<http://localhost:8000/admin.html|관리자에서 확인 →>`,
+          }),
+        });
+      }
+    } catch (e: any) { this.logger.debug(`Slack notify skipped: ${e?.message}`); }
+
     return { exchangeId, amount, status: 'PENDING', message: 'NaverPay 측에서 적립 확정 시 CONFIRMED로 변경됩니다.' };
   }
 

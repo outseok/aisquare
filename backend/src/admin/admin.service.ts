@@ -165,6 +165,14 @@ export class AdminService {
     return { items, total, page, totalPages: Math.ceil(total / limit) };
   }
 
+  async getUnreadCount() {
+    const [reports, naverExchanges] = await Promise.all([
+      this.prisma.report.count({ where: { status: { in: ['PENDING' as any, 'IN_REVIEW' as any] } } }),
+      this.prisma.naverPointExchange.count({ where: { status: 'PENDING' } }),
+    ]);
+    return { reports, naverExchanges, total: reports + naverExchanges };
+  }
+
   async getAdminLogs(page = 1, limit = 50) {
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([

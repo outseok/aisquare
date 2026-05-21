@@ -90,9 +90,38 @@
       av.style.background = tones[seed % tones.length];
     }
     if (nm && u) nm.textContent = u.nickname || u.name || u.username || "사용자";
+    // 관리자 클래스 토글
+    document.documentElement.classList.toggle("aisq-admin", !!(u && u.isAdmin));
   }
   syncHeaderAuth();
   window.addEventListener("aisquare:auth-change", syncHeaderAuth);
+
+  // 관리자 미처리 카운트 폴링 (admin 헤더 뱃지)
+  async function refreshAdminBadge() {
+    const badge = document.getElementById("hdrAdminBadge");
+    if (!badge) return;
+    const u = api && api.isLoggedIn() ? api.getCurrentUser() : null;
+    if (!u || !u.isAdmin) { badge.classList.add("hidden"); return; }
+    try {
+      const res = await fetch(api.API_BASE + "/admin/unread-count", {
+        headers: { "Authorization": "Bearer " + api.getJwt() },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const total = data.total || 0;
+      const link = badge.closest(".hdr-admin");
+      if (total > 0) {
+        // dot 형태 — 숫자는 hover tooltip에만 표시
+        badge.classList.remove("hidden");
+        if (link) link.title = `관리자 콘솔 · 미처리 신고 ${data.reports}건 · NaverPay 전환 ${data.naverExchanges}건`;
+      } else {
+        badge.classList.add("hidden");
+        if (link) link.title = "관리자 콘솔";
+      }
+    } catch (e) { /* silent */ }
+  }
+  refreshAdminBadge();
+  setInterval(refreshAdminBadge, 30000);  // 30초마다 폴링
 
   // Header logout button (on mypage)
   const logoutBtn = document.getElementById("logoutBtn");

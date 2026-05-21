@@ -4,13 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>상품 상세 — AISquare</title>
-    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <link rel="stylesheet" href="./styles.css?v=1779351319" />
     <script>
       (function () {
         try {
           var s = localStorage.getItem('aisquare-mock-store-v2');
           var u = s && JSON.parse(s).user;
           if (u) document.documentElement.classList.add('aisq-loggedin');
+          if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
         } catch (e) {}
       })();
     </script>
@@ -102,15 +103,20 @@
           <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           </button>
-          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only data-admin-hide>
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </a>
-          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only data-admin-hide>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
           </a>
-          <a href="./sell.html" class="hdr-sell" data-auth-only>
+          <a href="./sell.html" class="hdr-sell" data-auth-only data-admin-hide>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             상품 등록
+          </a>
+          <a href="./admin.html" class="hdr-admin" data-admin-only title="관리자 콘솔">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            관리자
+            <span class="pending-badge hidden" id="hdrAdminBadge"></span>
           </a>
           <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
             <span class="avatar" id="hdrAvatar">U</span>
@@ -143,8 +149,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779342157"></script>
-    <script src="./app.js?v=1779342157"></script>
+    <script src="./api.js?v=1779351319"></script>
+    <script src="./app.js?v=1779351319"></script>
     <script>
       (async function() {
         var api = window.AISquareAPI;
@@ -213,13 +219,11 @@
               '<h2>이 상품은 어떤 노하우인가요?</h2>',
               '<p>실무에서 검증된 ' + (product.tags || []).join(' · ') + ' 노하우를 즉시 활용할 수 있는 형태로 정리한 자료입니다. 다운로드 후 자유롭게 수정·재가공하여 사용하실 수 있으며, 72시간 자동 확정 정책으로 안전하게 거래됩니다.</p>',
             '</div>',
-            '<div class="pd-block">',
-              '<h2>구매자 리뷰 <span style="color:#87909d;font-weight:700;font-size:16px;">(' + product.reviewCount + ')</span></h2>',
-              '<div class="pd-reviews">',
-                '<div class="pd-review"><div class="head"><span class="av">K</span><b>kim.work</b><span class="star">★ 5.0</span></div><p>실무에 바로 적용할 수 있는 구체적인 프롬프트와 시트가 잘 정리되어 있어요. 강력 추천합니다.</p></div>',
-                '<div class="pd-review"><div class="head"><span class="av">M</span><b>mkt.lab</b><span class="star">★ 4.8</span></div><p>가격 대비 정말 만족스러운 자료였습니다. 처음 입문하시는 분들께 좋을 것 같아요.</p></div>',
-                '<div class="pd-review"><div class="head"><span class="av">D</span><b>devmate</b><span class="star">★ 4.9</span></div><p>이번 분기 가장 잘 산 자료 중 하나. 사이트 평점이 진짜네요.</p></div>',
-              '</div>',
+            // 상품별 리뷰는 1:1 판매 특성상 부적합 — 판매자 페이지의 통합 리뷰로 안내
+            '<div class="pd-block" style="background:#fafbfc;border:1px dashed #d4dae4;border-radius:14px;padding:24px 28px;text-align:center;">',
+              '<p style="margin:0 0 6px;color:#1f2a38;font-size:14.5px;font-weight:700;">이 판매자의 리뷰는 판매자 페이지에서 모아 보실 수 있어요.</p>',
+              '<p style="margin:0 0 14px;color:#677181;font-size:12.5px;line-height:1.6;">AISquare는 1:1 디지털 자산 거래 특성상 상품별 리뷰가 아닌 판매자 단위로 신뢰도와 리뷰를 관리합니다.</p>',
+              '<a href="./seller.html?u=' + encodeURIComponent(product.sellerUsername || '') + '" style="display:inline-block;padding:10px 22px;background:#050505;color:#fff;border-radius:8px;font-weight:800;font-size:13px;text-decoration:none;">' + escapeHtml(product.sellerName || product.sellerUsername || '판매자') + ' 페이지에서 리뷰 보기 →</a>',
             '</div>',
           '</div>'
         ].join('');

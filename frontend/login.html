@@ -4,13 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>로그인 — AISquare</title>
-    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <link rel="stylesheet" href="./styles.css?v=1779351319" />
     <script>
       (function () {
         try {
           var s = localStorage.getItem('aisquare-mock-store-v2');
           var u = s && JSON.parse(s).user;
           if (u) document.documentElement.classList.add('aisq-loggedin');
+          if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
         } catch (e) {}
       })();
     </script>
@@ -31,15 +32,20 @@
           <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           </button>
-          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only data-admin-hide>
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </a>
-          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only data-admin-hide>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
           </a>
-          <a href="./sell.html" class="hdr-sell" data-auth-only>
+          <a href="./sell.html" class="hdr-sell" data-auth-only data-admin-hide>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             상품 등록
+          </a>
+          <a href="./admin.html" class="hdr-admin" data-admin-only title="관리자 콘솔">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            관리자
+            <span class="pending-badge hidden" id="hdrAdminBadge"></span>
           </a>
           <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
             <span class="avatar" id="hdrAvatar">U</span>
@@ -78,7 +84,7 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779342157"></script>
-    <script src="./app.js?v=1779342157"></script>
+    <script src="./api.js?v=1779351319"></script>
+    <script src="./app.js?v=1779351319"></script>
   </body>
 </html>

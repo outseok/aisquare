@@ -131,7 +131,22 @@ h1, h2, h3, h4, .pcard h4, .rk-info .title, .feature-copy h2, .latest-card stron
   border-radius: 50%;
   background: #1F3AE0; color: #fff;
   font-size: 12px; font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  padding: 0;
+  text-indent: 0;
+  font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* CJK 글자(한글 등) 아바타 시각적 중앙 보정 — 모든 .av / .avatar 공통 적용 */
+.av, .avatar, .answer-actions .hdr-user .avatar,
+.seller-hero .av, .pd-seller .av, .pd-review .head .av,
+.review-item .top .av, .mypage-user-card .av {
+  line-height: 1 !important;
+  text-align: center;
+  padding: 0;
+  text-indent: 0;
 }
 .answer-actions .hdr-login,
 .answer-actions .hdr-signup {
@@ -738,9 +753,50 @@ h1, h2, h3, h4, .pcard h4, .rk-info .title, .feature-copy h2, .latest-card stron
  * `.aisq-loggedin` to <html> before paint based on localStorage,
  * so the right buttons appear immediately.
  */
-[data-auth-only], [data-anon-only] { display: none !important; }
+[data-auth-only], [data-anon-only], [data-admin-only] { display: none !important; }
 .aisq-loggedin [data-auth-only] { display: inline-flex !important; }
 html:not(.aisq-loggedin) [data-anon-only] { display: inline-flex !important; }
+.aisq-admin [data-admin-only] { display: inline-flex !important; }
+.aisq-admin [data-admin-hide] { display: none !important; }
+
+/* Admin 헤더 칩 — 차분한 다크 그라데이션 + shield 아이콘 + 미니멀 dot 뱃지 */
+.hdr-admin {
+  position: relative;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1f2a38 0%, #0b0d12 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font: inherit; font-size: 12.5px; font-weight: 800; letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; gap: 7px;
+  text-decoration: none; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+.hdr-admin:hover {
+  background: linear-gradient(135deg, #2a3548 0%, #15181f 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.hdr-admin:active { transform: scale(0.97); }
+.hdr-admin svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.92; }
+.hdr-admin .pending-badge {
+  position: absolute;
+  top: -3px; right: -3px;
+  min-width: 9px; height: 9px;
+  background: #ff3357;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  /* dot 형태 (숫자 미표시) — text는 tooltip으로만 노출 */
+  font-size: 0; color: transparent;
+  box-shadow: 0 0 0 0 rgba(255, 51, 87, 0.5);
+  animation: hdrAdminPulse 2s ease-in-out infinite;
+}
+.hdr-admin .pending-badge.hidden { display: none; }
+@keyframes hdrAdminPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 51, 87, 0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 51, 87, 0); }
+}
 
 /* ===== Auth pages (login / register) ===== */
 .auth-section {

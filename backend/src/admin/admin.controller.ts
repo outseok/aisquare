@@ -52,6 +52,12 @@ export class AdminController {
     return this.adminService.getSettlementStats();
   }
 
+  @Get('unread-count')
+  @ApiOperation({ summary: '[관리자] 미처리 신고·전환 카운트 (헤더 뱃지용)' })
+  getUnreadCount() {
+    return this.adminService.getUnreadCount();
+  }
+
   @Get('products')
   @ApiOperation({ summary: '[관리자] 전체 상품 목록' })
   getAllProducts(@Query('page') page?: number, @Query('limit') limit?: number) {
