@@ -5,8 +5,16 @@ OrdererOrgs:
       - Hostname: orderer
 
 PeerOrgs:
-  - Name: Org1
-    Domain: org1.example.com
+  - Name: AISquare
+    Domain: aisquare.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: NaverPay
+    Domain: naverpay.com
     EnableNodeOUs: true
     Template:
       Count: 1

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>회사소개 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .about-section { padding: 56px 0 96px; }
+      .about-head { margin-bottom: 28px; }
+      .about-head h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.4px; }
+      .about-head p { margin: 0; color: #677181; font-size: 15px; }
+      .about-tabs { display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: #efeff1; margin-bottom: 32px; width: fit-content; flex-wrap: wrap; }
+      .about-tabs a { padding: 10px 20px; border-radius: 999px; font-weight: 800; font-size: 14px; color: var(--kmong-text); transition: background 0.15s ease; }
+      .about-tabs a:hover:not(.is-active) { background: rgba(0, 0, 0, 0.04); }
+      .about-tabs a.is-active { background: #050505; color: #fff; }
+
+      .about-hero { background: linear-gradient(135deg, #050505 0%, #1F3AE0 100%); color: #fff; border-radius: 18px; padding: 56px 48px; margin-bottom: 36px; }
+      .about-hero h2 { margin: 0 0 14px; font-size: 30px; letter-spacing: -0.4px; }
+      .about-hero p { margin: 0; opacity: 0.85; font-size: 16px; line-height: 1.7; max-width: 600px; }
+
+      .about-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
+      .stat-card { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 24px 22px; }
+      .stat-card .lbl { color: #87909d; font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em; }
+      .stat-card .val { margin-top: 8px; font-size: 28px; font-weight: 900; color: #1f2a38; letter-spacing: -0.3px; }
+      .stat-card .val em { font-style: normal; font-size: 15px; color: #677181; font-weight: 700; margin-left: 3px; }
+
+      .about-card { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 36px 40px; margin-bottom: 24px; }
+      .about-card h3 { margin: 0 0 12px; font-size: 20px; }
+      .about-card p { margin: 0 0 8px; color: #3f4a59; font-size: 15px; line-height: 1.75; }
+
+      .job-list { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+      .job-card { padding: 22px 26px; border: 1px solid #ececf0; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; transition: border-color 0.15s ease, background 0.15s ease; cursor: pointer; }
+      .job-card:hover { border-color: #1F3AE0; background: #fcfcff; }
+      .job-card .lt h4 { margin: 0 0 4px; font-size: 15.5px; color: #1f2a38; }
+      .job-card .lt p { margin: 0; color: #677181; font-size: 13px; }
+      .job-card .badge { padding: 6px 12px; background: #eef1ff; color: #1F3AE0; border-radius: 999px; font-size: 12px; font-weight: 800; }
+
+      .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      .blog-card { border: 1px solid #ececf0; border-radius: 12px; padding: 22px 22px 24px; transition: border-color 0.15s ease, transform 0.15s ease; cursor: pointer; }
+      .blog-card:hover { border-color: #1F3AE0; transform: translateY(-2px); }
+      .blog-card .cat { display: inline-block; padding: 3px 10px; background: #f4f6fa; color: #677181; border-radius: 999px; font-size: 11.5px; font-weight: 800; margin-bottom: 10px; }
+      .blog-card h4 { margin: 0 0 8px; font-size: 15.5px; line-height: 1.45; color: #1f2a38; }
+      .blog-card p { margin: 0 0 14px; color: #677181; font-size: 13px; line-height: 1.5; }
+      .blog-card .date { color: #87909d; font-size: 12px; }
+
+      [data-panel] { display: none; }
+      [data-panel].is-active { display: block; }
+
+      @media (max-width: 960px) {
+        .about-stats { grid-template-columns: repeat(2, 1fr); }
+        .blog-grid { grid-template-columns: 1fr; }
+        .about-hero { padding: 40px 28px; }
+        .about-card { padding: 28px 24px; }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare About">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="about-section">
+        <div class="kmong-wrap">
+          <div class="about-head">
+            <h1>AISquare 소개</h1>
+            <p>검증된 AI 노하우를 안전하게 거래하는 Web3 마켓플레이스</p>
+          </div>
+
+          <div class="about-tabs" id="aboutTabs">
+            <a href="?tab=company" data-tab="company">회사 소개</a>
+            <a href="?tab=ir" data-tab="ir">IR 안내</a>
+            <a href="?tab=career" data-tab="career">인재 채용</a>
+            <a href="?tab=partnership" data-tab="partnership">제휴·광고</a>
+            <a href="?tab=blog" data-tab="blog">AISquare 로그</a>
+            <a href="?tab=portfolio" data-tab="portfolio">포트폴리오</a>
+          </div>
+
+          <div data-panel="company" class="is-active">
+            <div class="about-hero">
+              <h2>AI 시대의 노하우를<br />가장 안전하게 거래합니다.</h2>
+              <p>AISquare는 프롬프트, 자동화 시트, 실전 노하우를 거래하는 Web3 기반 마켓플레이스입니다. Hyperledger Fabric으로 모든 거래를 원장에 기록해 신뢰를 만들고, 72시간 자동 확정 정책으로 구매자와 판매자 모두를 보호합니다.</p>
+            </div>
+            <div class="about-stats">
+              <div class="stat-card"><div class="lbl">누적 거래</div><div class="val">38,420<em>건</em></div></div>
+              <div class="stat-card"><div class="lbl">활동 판매자</div><div class="val">428<em>명</em></div></div>
+              <div class="stat-card"><div class="lbl">평균 평점</div><div class="val">4.9<em>점</em></div></div>
+              <div class="stat-card"><div class="lbl">월 활성 사용자</div><div class="val">12,840<em>명</em></div></div>
+            </div>
+            <div class="about-card">
+              <h3>회사 정보</h3>
+              <p><b>상호:</b> AISquare Inc.</p>
+              <p><b>대표이사:</b> 김에이아이</p>
+              <p><b>설립일:</b> 2025년 11월 1일</p>
+              <p><b>본사:</b> 서울특별시 강남구 테헤란로 134, 5층</p>
+              <p><b>사업자등록번호:</b> 123-45-67890</p>
+            </div>
+          </div>
+
+          <div data-panel="ir">
+            <div class="about-card">
+              <h3>IR 안내</h3>
+              <p>AISquare는 시리즈 A 라운드를 준비 중입니다. 투자 관련 문의는 ir@aisquare.com 으로 연락 주세요.</p>
+              <p style="margin-top: 16px;"><b>주요 지표 (2026 Q1 기준):</b></p>
+              <ul style="margin: 8px 0; padding-left: 22px; color: #3f4a59; line-height: 1.8;">
+                <li>MAU 12,840명 · QoQ +84%</li>
+                <li>GMV 4.2억 Square · QoQ +112%</li>
+                <li>판매자 NRR 138%</li>
+                <li>거래 확정률 96.4%</li>
+              </ul>
+            </div>
+          </div>
+
+          <div data-panel="career">
+            <div class="about-card">
+              <h3>인재 채용</h3>
+              <p>AISquare는 AI와 Web3를 잇는 마켓플레이스를 함께 만들 동료를 찾습니다.</p>
+              <div class="job-list">
+                <div class="job-card">
+                  <div class="lt"><h4>프론트엔드 엔지니어 (React)</h4><p>경력 3년+ · 정규직 · 강남</p></div>
+                  <span class="badge">상시</span>
+                </div>
+                <div class="job-card">
+                  <div class="lt"><h4>백엔드 엔지니어 (NestJS · Fabric)</h4><p>경력 3년+ · 정규직 · 강남</p></div>
+                  <span class="badge">상시</span>
+                </div>
+                <div class="job-card">
+                  <div class="lt"><h4>프로덕트 디자이너</h4><p>경력 무관 · 정규직 · 강남</p></div>
+                  <span class="badge">신규</span>
+                </div>
+                <div class="job-card">
+                  <div class="lt"><h4>커뮤니티 매니저</h4><p>경력 1년+ · 정규직 · 강남</p></div>
+                  <span class="badge">상시</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div data-panel="partnership">
+            <div class="about-card">
+              <h3>제휴·광고 문의</h3>
+              <p>AISquare 사용자들과 만나기를 원하는 브랜드를 환영합니다.</p>
+              <ul style="margin: 16px 0; padding-left: 22px; color: #3f4a59; line-height: 1.9;">
+                <li>마켓 메인 배너 광고</li>
+                <li>크리에이터 콜라보 캠페인</li>
+                <li>AI 도구 기업 콘텐츠 파트너십</li>
+                <li>학회·교육기관 단체 라이선스</li>
+              </ul>
+              <p style="margin-top: 14px;">📧 partnership@aisquare.com 으로 연락 주세요.</p>
+            </div>
+          </div>
+
+          <div data-panel="blog">
+            <div class="about-card">
+              <h3>AISquare 로그</h3>
+              <p>AI·프롬프트·자동화 트렌드와 우리 팀 인사이트를 공유합니다.</p>
+              <div class="blog-grid" style="margin-top: 24px;">
+                <div class="blog-card"><span class="cat">인사이트</span><h4>2026년 상반기, AI 노하우 거래 트렌드 5가지</h4><p>가장 많이 팔린 카테고리부터 신흥 강자까지...</p><span class="date">2026.05.18</span></div>
+                <div class="blog-card"><span class="cat">팀 인터뷰</span><h4>판매자 인터뷰: 월 200만원 버는 카피 프롬프트 작가</h4><p>처음 등록한 노하우가 600회 팔리기까지의 여정.</p><span class="date">2026.05.12</span></div>
+                <div class="blog-card"><span class="cat">기술</span><h4>Hyperledger Fabric으로 만든 거래 원장</h4><p>변조 불가능한 거래 기록이 신뢰를 만드는 방식.</p><span class="date">2026.05.03</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div data-panel="portfolio">
+            <div class="about-card">
+              <h3>포트폴리오</h3>
+              <p>AISquare에서 거래되는 다양한 노하우 카테고리를 둘러보세요.</p>
+              <ul style="margin: 16px 0; padding-left: 22px; color: #3f4a59; line-height: 1.9;">
+                <li><a href="./market.html?cat=marketer" style="color:#1F3AE0;font-weight:700;">마케팅</a> — 카피·SEO·콘텐츠 캘린더</li>
+                <li><a href="./market.html?cat=creator" style="color:#1F3AE0;font-weight:700;">콘텐츠</a> — 영상 스크립트·썸네일·자막</li>
+                <li><a href="./market.html?cat=dev" style="color:#1F3AE0;font-weight:700;">개발</a> — 코드리뷰·테스트·문서화</li>
+                <li><a href="./market.html?cat=prompt" style="color:#1F3AE0;font-weight:700;">프롬프트</a> — GPT-5·Claude·Midjourney 활용</li>
+                <li><a href="./market.html?cat=automation" style="color:#1F3AE0;font-weight:700;">자동화</a> — Zapier·Make·Notion 워크플로우</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+    <script>
+      (function() {
+        var tabs = document.querySelectorAll('#aboutTabs a');
+        var panels = document.querySelectorAll('[data-panel]');
+        var qs = new URLSearchParams(location.search);
+        var active = qs.get('tab') || 'company';
+        tabs.forEach(function(a) { a.classList.toggle('is-active', a.getAttribute('data-tab') === active); });
+        panels.forEach(function(p) { p.classList.toggle('is-active', p.getAttribute('data-panel') === active); });
+      })();
+    </script>
+  </body>
+</html>

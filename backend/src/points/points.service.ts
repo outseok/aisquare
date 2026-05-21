@@ -1,14 +1,20 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FabricService } from '../fabric/fabric.service';
 import { WithdrawDto } from './dto/withdraw.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 const MIN_WITHDRAW_RP = 5000;
-// 1,100원 = 100 RP → 1 RP = 11원
 const KRW_PER_RP = 11;
 
 @Injectable()
 export class PointsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(PointsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private fabric: FabricService,
+  ) {}
 
   async getBalance(userId: string) {
     const latest = await this.prisma.pointLog.findFirst({
@@ -16,6 +22,98 @@ export class PointsService {
       orderBy: { createdAt: 'desc' },
     });
     return { balance: latest?.balance ?? 0 };
+  }
+
+  // PAID 잔액만 분리 조회 (네이버 전환 가능 잔액)
+  async getPaidBalance(userId: string) {
+    const sum = await this.prisma.pointLog.aggregate({
+      where: { userId, category: 'PAID' },
+      _sum: { amount: true },
+    });
+    return { balance: sum._sum.amount ?? 0 };
+  }
+
+  // ACTIVITY 잔액 (전환 불가)
+  async getActivityBalance(userId: string) {
+    const sum = await this.prisma.pointLog.aggregate({
+      where: { userId, category: 'ACTIVITY' },
+      _sum: { amount: true },
+    });
+    return { balance: sum._sum.amount ?? 0 };
+  }
+
+  // 네이버페이 전환 — PAID 포인트만 사용 가능
+  async exchangeToNaver(userId: string, amount: number) {
+    if (!amount || amount <= 0) throw new BadRequestException('전환 금액이 잘못됐습니다.');
+
+    const paid = await this.getPaidBalance(userId);
+    if (paid.balance < amount) {
+      throw new BadRequestException(
+        `PAID 포인트가 부족합니다. 보유 ${paid.balance.toLocaleString()} · 요청 ${amount.toLocaleString()}`,
+      );
+    }
+
+    const exchangeId = 'ex-' + uuidv4();
+
+    // 1) DB에 PENDING 기록
+    const record = await this.prisma.naverPointExchange.create({
+      data: {
+        id: exchangeId,
+        userId,
+        amountPaid: amount,
+        direction: 'AISQUARE_TO_NAVER',
+        status: 'PENDING',
+      },
+    });
+
+    // 2) PointLog NAVER_EXCHANGE_OUT (PAID 차감)
+    const balanceAll = (await this.getBalance(userId)).balance;
+    await this.prisma.pointLog.create({
+      data: {
+        userId,
+        type: 'NAVER_EXCHANGE_OUT',
+        category: 'PAID',
+        amount: -amount,
+        balance: balanceAll - amount,
+        memo: `네이버페이 전환 ${amount} RP → ${(amount).toLocaleString()} NaverPoint`,
+        exchangeId,
+      },
+    });
+
+    // 3) Fabric naver-channel exchange chaincode 호출
+    try {
+      await this.fabric.exchangeToNaver(exchangeId, userId, amount);
+      await this.prisma.naverPointExchange.update({
+        where: { id: exchangeId },
+        data: { fabricTxId: exchangeId },
+      });
+    } catch (e: any) {
+      this.logger.warn(`Fabric exchangeToNaver 실패 (DB만 기록): ${e?.message}`);
+    }
+
+    return { exchangeId, amount, status: 'PENDING', message: 'NaverPay 측에서 적립 확정 시 CONFIRMED로 변경됩니다.' };
+  }
+
+  // NaverPay가 확정 호출 (보통 webhook). dev에서는 admin이 수동.
+  async confirmNaverExchange(exchangeId: string, naverTxId: string) {
+    const rec = await this.prisma.naverPointExchange.findUnique({ where: { id: exchangeId } });
+    if (!rec) throw new NotFoundException('전환 내역 없음');
+    if (rec.status !== 'PENDING') throw new BadRequestException(`이미 처리됨 (${rec.status})`);
+    const updated = await this.prisma.naverPointExchange.update({
+      where: { id: exchangeId },
+      data: { status: 'CONFIRMED', naverTxId },
+    });
+    try { await this.fabric.confirmNaverExchange(exchangeId, naverTxId); } catch (e: any) {
+      this.logger.warn(`Fabric confirm 실패 (DB만 기록): ${e?.message}`);
+    }
+    return updated;
+  }
+
+  async getMyExchanges(userId: string) {
+    return this.prisma.naverPointExchange.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async getHistory(userId: string, page = 1, limit = 20) {

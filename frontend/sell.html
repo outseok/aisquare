@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>상품 등록 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .sell-section { padding: 56px 0 96px; }
+      .sell-grid { display: grid; grid-template-columns: 1fr 320px; gap: 36px; align-items: flex-start; }
+      .sell-card { background: #fff; border: 1px solid #ececf0; border-radius: 16px; padding: 36px 40px; }
+      .sell-card h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.3px; }
+      .sell-card .sub { margin: 0 0 28px; color: #677181; font-size: 14px; }
+      .sell-field { margin-bottom: 22px; }
+      .sell-field label { display: block; margin-bottom: 8px; font-size: 13.5px; font-weight: 800; color: #1f2a38; }
+      .sell-field label em { font-style: normal; color: #e74c3c; margin-left: 3px; }
+      .sell-field input, .sell-field select, .sell-field textarea {
+        width: 100%; padding: 12px 14px; border: 1px solid #d4dae4; border-radius: 8px;
+        font-size: 14px; font-family: inherit; background: #fff;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .sell-field input:focus, .sell-field select:focus, .sell-field textarea:focus {
+        outline: 0; border-color: #1F3AE0; box-shadow: 0 0 0 3px rgba(31, 58, 224, 0.10);
+      }
+      .sell-field textarea { min-height: 120px; resize: vertical; }
+      .sell-field .hint { display: block; margin-top: 6px; font-size: 12.5px; color: #87909d; }
+      .sell-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+      .cover-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 8px; }
+      .cover-picker input { display: none; }
+      .cover-picker label {
+        display: block; padding: 0; border-radius: 6px; border: 2px solid #ececf0;
+        overflow: hidden; cursor: pointer; transition: border-color 0.15s ease, transform 0.08s ease;
+        font-weight: inherit; margin: 0;
+      }
+      .cover-picker label img { width: 100%; height: 60px; object-fit: cover; display: block; }
+      .cover-picker label:hover { transform: translateY(-2px); }
+      .cover-picker input:checked + img, .cover-picker label:has(input:checked) { border-color: #1F3AE0; box-shadow: 0 0 0 2px rgba(31, 58, 224, 0.15); }
+
+      .sell-actions { display: flex; gap: 10px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #ececf0; }
+      .sell-submit { flex: 1; height: 48px; background: #050505; color: #fff; border: 0; border-radius: 8px; font-size: 15px; font-weight: 900; cursor: pointer; transition: background 0.15s ease, transform 0.08s ease; }
+      .sell-submit:hover { background: #1F3AE0; }
+      .sell-submit:active { transform: scale(0.98); }
+      .sell-draft { height: 48px; padding: 0 22px; background: #fff; color: #1f2a38; border: 1px solid #d4dae4; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer; }
+      .sell-draft:hover { background: #f4f6fa; }
+
+      .sell-aside { position: sticky; top: 120px; display: flex; flex-direction: column; gap: 16px; }
+      .sell-tip { background: #f8f9fb; border-radius: 14px; padding: 22px 24px; }
+      .sell-tip h3 { margin: 0 0 10px; font-size: 15px; color: #1f2a38; }
+      .sell-tip ul { margin: 0; padding-left: 18px; color: #3f4a59; font-size: 13.5px; line-height: 1.7; }
+      .sell-fee { background: #eef1ff; border-radius: 14px; padding: 22px 24px; }
+      .sell-fee h3 { margin: 0 0 12px; font-size: 14px; color: #1F3AE0; letter-spacing: 0.05em; }
+      .sell-fee .fee-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+      .sell-fee .fee-row b { color: #050505; }
+
+      @media (max-width: 960px) {
+        .sell-grid { grid-template-columns: 1fr; }
+        .sell-row { grid-template-columns: 1fr; }
+        .sell-aside { position: static; }
+        .cover-picker { grid-template-columns: repeat(4, 1fr); }
+        .sell-card { padding: 28px 24px; }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Sell">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="sell-section">
+        <div class="kmong-wrap">
+          <div class="sell-grid">
+            <div class="sell-card">
+              <h1>상품 등록</h1>
+              <p class="sub">AI 노하우, 프롬프트, 자동화 시트를 판매해 보세요. 등록 후 검수까지 24시간 안에 완료됩니다.</p>
+
+              <form id="sellForm">
+                <div class="sell-field">
+                  <label>카테고리 <em>*</em></label>
+                  <select id="sellCategory" required>
+                    <option value="">카테고리 선택</option>
+                    <option value="marketer">마케팅</option>
+                    <option value="creator">콘텐츠</option>
+                    <option value="dev">개발</option>
+                    <option value="prompt">프롬프트</option>
+                    <option value="automation">자동화</option>
+                    <option value="seo">SEO</option>
+                  </select>
+                </div>
+
+                <div class="sell-field">
+                  <label>상품 제목 <em>*</em></label>
+                  <input id="sellTitle" type="text" placeholder="예) GPT-5 SNS 광고 카피 프롬프트 50종 + 톤앤매너 학습 시트" required maxlength="60" />
+                  <span class="hint">최대 60자, 핵심 노하우와 결과물을 명확히</span>
+                </div>
+
+                <div class="sell-field">
+                  <label>상세 설명 <em>*</em></label>
+                  <textarea id="sellDescription" placeholder="구매자가 어떤 결과물을 얻을 수 있는지, 어떻게 활용하는지 자세히 설명해 주세요." required></textarea>
+                </div>
+
+                <div class="sell-row">
+                  <div class="sell-field">
+                    <label>가격 (Square) <em>*</em></label>
+                    <input id="sellPrice" type="number" placeholder="3500" min="1000" max="50000" step="100" required />
+                    <span class="hint">권장 가격: 1,000 ~ 10,000 Square</span>
+                  </div>
+                  <div class="sell-field">
+                    <label>예상 정산액 (수수료 8%)</label>
+                    <input id="sellPayout" type="text" placeholder="-" readonly />
+                  </div>
+                </div>
+
+                <div class="sell-field">
+                  <label>대표 이미지 <em>*</em></label>
+                  <div class="cover-picker" id="coverPicker">
+                    <label><input type="radio" name="cover" value="01" required /><img src="./assets/cover-01.svg" alt="cover 1" /></label>
+                    <label><input type="radio" name="cover" value="02" /><img src="./assets/cover-02.svg" alt="cover 2" /></label>
+                    <label><input type="radio" name="cover" value="03" /><img src="./assets/cover-03.svg" alt="cover 3" /></label>
+                    <label><input type="radio" name="cover" value="04" /><img src="./assets/cover-04.svg" alt="cover 4" /></label>
+                    <label><input type="radio" name="cover" value="05" /><img src="./assets/cover-05.svg" alt="cover 5" /></label>
+                    <label><input type="radio" name="cover" value="06" /><img src="./assets/cover-06.svg" alt="cover 6" /></label>
+                    <label><input type="radio" name="cover" value="07" /><img src="./assets/cover-07.svg" alt="cover 7" /></label>
+                    <label><input type="radio" name="cover" value="08" /><img src="./assets/cover-08.svg" alt="cover 8" /></label>
+                    <label><input type="radio" name="cover" value="09" /><img src="./assets/cover-09.svg" alt="cover 9" /></label>
+                    <label><input type="radio" name="cover" value="10" /><img src="./assets/cover-10.svg" alt="cover 10" /></label>
+                    <label><input type="radio" name="cover" value="11" /><img src="./assets/cover-11.svg" alt="cover 11" /></label>
+                    <label><input type="radio" name="cover" value="12" /><img src="./assets/cover-12.svg" alt="cover 12" /></label>
+                  </div>
+                  <span class="hint">12종 표지 중 선택하거나 직접 업로드 (직접 업로드는 준비 중)</span>
+                </div>
+
+                <div class="sell-field">
+                  <label>판매자 닉네임 <em>*</em></label>
+                  <input id="sellNickname" type="text" placeholder="자동으로 채워집니다" required />
+                </div>
+
+                <div class="sell-actions">
+                  <button type="button" class="sell-draft" id="sellDraftBtn">임시저장</button>
+                  <button type="submit" class="sell-submit">상품 등록</button>
+                </div>
+              </form>
+            </div>
+
+            <aside class="sell-aside">
+              <div class="sell-fee">
+                <h3>수수료 안내</h3>
+                <div class="fee-row"><span>판매 수수료</span><b>8%</b></div>
+                <div class="fee-row"><span>정산 주기</span><b>구매 확정 후</b></div>
+                <div class="fee-row"><span>출금 영업일</span><b>1~2일</b></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+    <script>
+      (function() {
+        var priceInput = document.getElementById('sellPrice');
+        var payoutInput = document.getElementById('sellPayout');
+        var nicknameInput = document.getElementById('sellNickname');
+        var form = document.getElementById('sellForm');
+        var draftBtn = document.getElementById('sellDraftBtn');
+
+        // Auto-calc payout (price * 0.92)
+        priceInput.addEventListener('input', function() {
+          var p = parseInt(priceInput.value, 10);
+          payoutInput.value = isNaN(p) ? '-' : Math.floor(p * 0.92).toLocaleString() + ' Square';
+        });
+
+        // Pre-fill nickname from logged-in user
+        try {
+          var s = JSON.parse(localStorage.getItem('aisquare-mock-store-v2'));
+          if (s && s.user && s.user.nickname) nicknameInput.value = s.user.nickname;
+        } catch (e) {}
+
+        // Submit handler — REAL BE create
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          var t = window.showToast || function(m){ alert(m); };
+          var api = window.AISquareAPI;
+
+          if (!api.isLoggedIn() || !api.getJwt()) {
+            t('로그인이 필요합니다.');
+            setTimeout(function(){ location.href='./login.html'; }, 700);
+            return;
+          }
+          var me = api.getCurrentUser() || {};
+          if (!me.phoneVerified) {
+            t('PASS 본인인증이 필요합니다. 마이페이지에서 인증해 주세요.');
+            setTimeout(function(){ location.href='./mypage.html'; }, 1200);
+            return;
+          }
+
+          var submit = form.querySelector('.sell-submit');
+          submit.disabled = true; submit.textContent = '등록 중...';
+
+          try {
+            // Build FormData. BE requires multipart with `file` (real sell asset)
+            // and optional `image` (cover). We synthesize a stub sell file and
+            // fetch the selected cover SVG as the image.
+            var fd = new FormData();
+            fd.append('title', document.getElementById('sellTitle').value.trim());
+            fd.append('description', document.getElementById('sellDescription').value.trim());
+            fd.append('price', String(parseInt(priceInput.value, 10)));
+            var cat = document.getElementById('sellCategory').value || '';
+            fd.append('tags', JSON.stringify(cat ? [cat] : []));
+
+            // Stub sell file (PDF placeholder so BE accepts the mimetype)
+            var stub = new Blob(
+              ['%PDF-1.4\n% AISquare 상품 자료 (stub)\n등록자: ' + (me.nickname||'') + '\n시각: ' + new Date().toISOString()],
+              { type: 'application/pdf' }
+            );
+            fd.append('file', stub, 'product.pdf');
+
+            // Cover image: fetch chosen cover-XX.svg as blob → upload
+            var coverChoice = document.querySelector('input[name="cover"]:checked');
+            if (coverChoice) {
+              var coverPath = './assets/cover-' + coverChoice.value + '.svg';
+              try {
+                var coverRes = await fetch(coverPath);
+                var coverBlob = await coverRes.blob();
+                fd.append('image', new Blob([await coverBlob.arrayBuffer()], { type: 'image/svg+xml' }), 'cover-' + coverChoice.value + '.svg');
+              } catch (e) { /* skip image if fetch fails */ }
+            }
+
+            var result = await api.products.create(fd);
+            t('상품 등록 완료! 마이페이지로 이동합니다.');
+            setTimeout(function() { location.href = './mypage.html?tab=sales'; }, 1200);
+          } catch (err) {
+            console.error('sell create:', err);
+            submit.disabled = false; submit.textContent = '상품 등록';
+            if (err.status === 401) t('로그인 세션이 만료됐습니다.');
+            else if (err.status === 403) t('PASS 본인인증이 필요합니다.');
+            else t(err.message || '등록에 실패했습니다.');
+          }
+        });
+
+        draftBtn.addEventListener('click', function() {
+          (window.showToast || alert)('임시저장 되었습니다.');
+        });
+      })();
+    </script>
+  </body>
+</html>

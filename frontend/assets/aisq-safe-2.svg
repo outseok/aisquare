@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 270" role="img">
+  <defs>
+    <pattern id="bn-grid" width="14" height="14" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.7" fill="#0B0D12" fill-opacity="0.08"></circle>
+    </pattern>
+    <linearGradient id="bn-shadow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0B0D12" stop-opacity="0.10"></stop>
+      <stop offset="100%" stop-color="#0B0D12" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="270" fill="#F4F2EC"></rect>
+  <rect width="360" height="270" fill="url(#bn-grid)"></rect>
+  
+  
+  <rect x="40" y="68" width="220" height="172" rx="8" fill="#fff" stroke="#0B0D12" stroke-width="1.5"></rect>
+  
+  <rect x="40" y="68" width="220" height="22" rx="8" fill="#0B0D12"></rect>
+  <rect x="40" y="80" width="220" height="10" fill="#0B0D12"></rect>
+  <circle cx="52" cy="79" r="3" fill="#E4F25C"></circle>
+  <circle cx="62" cy="79" r="3" fill="#fff" fill-opacity="0.4"></circle>
+  <circle cx="72" cy="79" r="3" fill="#fff" fill-opacity="0.4"></circle>
+  <text x="252" y="83" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="8" letter-spacing="0.08em" fill="#fff" fill-opacity="0.75">PROMPT.PDF</text>
+
+  
+  <text x="52" y="116" font-family="IBM Plex Mono, monospace" font-size="8" letter-spacing="0.16em" fill="#6B7080">CHAPTER 01</text>
+  <rect x="52" y="124" width="160" height="8" rx="2" fill="#0B0D12"></rect>
+  <rect x="52" y="138" width="120" height="8" rx="2" fill="#0B0D12"></rect>
+  <rect x="52" y="158" width="184" height="3" rx="1.5" fill="#D9D5C8"></rect>
+  <rect x="52" y="167" width="172" height="3" rx="1.5" fill="#D9D5C8"></rect>
+  <rect x="52" y="176" width="148" height="3" rx="1.5" fill="#D9D5C8"></rect>
+  <rect x="52" y="185" width="180" height="3" rx="1.5" fill="#D9D5C8"></rect>
+  <rect x="52" y="194" width="100" height="3" rx="1.5" fill="#D9D5C8"></rect>
+  
+  <rect x="52" y="210" width="196" height="22" rx="4" fill="#0B0D12"></rect>
+  <rect x="60" y="218" width="60" height="3" rx="1.5" fill="#E4F25C"></rect>
+  <rect x="124" y="218" width="80" height="3" rx="1.5" fill="#fff" fill-opacity="0.6"></rect>
+  <rect x="60" y="225" width="120" height="3" rx="1.5" fill="#fff" fill-opacity="0.4"></rect>
+
+  
+  <g transform="translate(218, 134)">
+    
+    <circle cx="0" cy="0" r="44" fill="#fff" fill-opacity="0.95" stroke="#0B0D12" stroke-width="2"></circle>
+    
+    <rect x="-30" y="-22" width="48" height="6" rx="2" fill="#0B0D12"></rect>
+    <rect x="-30" y="-10" width="36" height="6" rx="2" fill="#0B0D12"></rect>
+    <rect x="-30" y="6" width="42" height="3" rx="1.5" fill="#0B0D12" fill-opacity="0.4"></rect>
+    <rect x="-30" y="14" width="30" height="3" rx="1.5" fill="#0B0D12" fill-opacity="0.4"></rect>
+  </g>
+  
+  <line x1="256" y1="172" x2="282" y2="198" stroke="#0B0D12" stroke-width="7" stroke-linecap="round"></line>
+  <line x1="256" y1="172" x2="282" y2="198" stroke="#E4F25C" stroke-width="3" stroke-linecap="round"></line>
+
+  
+  <text x="40" y="56" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="700" letter-spacing="0.12em" fill="#1F3AE0">PREVIEW</text>
+
+</svg>

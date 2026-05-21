@@ -82,8 +82,8 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private getContract(chaincodeName: string) {
-    const channel = process.env.FABRIC_CHANNEL ?? 'recode-channel';
+  private getContract(chaincodeName: string, channelName?: string) {
+    const channel = channelName ?? process.env.FABRIC_CHANNEL ?? 'internal-channel';
     const network = this.gateway.getNetwork(channel);
     return network.getContract(chaincodeName);
   }
@@ -96,6 +96,19 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
 
   private async evaluateTx(chaincode: string, fn: string, args: string[]): Promise<string> {
     const contract = this.getContract(chaincode);
+    const result = await contract.evaluateTransaction(fn, ...args);
+    return Buffer.from(result).toString('utf-8');
+  }
+
+  // 채널 지정 가능한 버전 (internal-channel / naver-channel)
+  private async submit(channel: string, chaincode: string, fn: string, ...args: string[]): Promise<string> {
+    const contract = this.getContract(chaincode, channel);
+    const result = await contract.submitTransaction(fn, ...args);
+    return Buffer.from(result).toString('utf-8');
+  }
+
+  private async evaluate(channel: string, chaincode: string, fn: string, ...args: string[]): Promise<string> {
+    const contract = this.getContract(chaincode, channel);
     const result = await contract.evaluateTransaction(fn, ...args);
     return Buffer.from(result).toString('utf-8');
   }
@@ -311,5 +324,41 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
   /** @deprecated deductSquare() 사용 권장 */
   async deductPoints(userId: string, amount: number, memo: string): Promise<string> {
     return this.deductSquare(userId, amount, memo);
+  }
+
+  // ── naver-channel / exchange chaincode 호출 ─────────────────────────
+  /** 결제 포인트(PAID) → 네이버페이 전환 요청 (PAID 차감 + PENDING 기록) */
+  async exchangeToNaver(exchangeId: string, userId: string, amount: number): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] ExchangeToNaver | ex=${exchangeId} user=${userId} amt=${amount}`);
+      return exchangeId;
+    }
+    return await this.submit('naver-channel', 'exchange', 'ExchangeToNaver',
+      exchangeId, userId, String(amount));
+  }
+
+  /** NaverPay가 자기 시스템에서 적립 확정 후 호출 (NaverPayMSP 권한 필요) */
+  async confirmNaverExchange(exchangeId: string, naverTxId: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] ConfirmNaverExchange | ex=${exchangeId} naverTx=${naverTxId}`);
+      return exchangeId;
+    }
+    return await this.submit('naver-channel', 'exchange', 'ConfirmNaverExchange', exchangeId, naverTxId);
+  }
+
+  /** PAID 포인트 적립 (충전·결제 캐시백) — naver-channel exchange chaincode */
+  async issuePaid(userId: string, amount: number, memo: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] IssuePaid | user=${userId} amt=${amount} memo=${memo}`);
+      return 'demo-paid';
+    }
+    return await this.submit('naver-channel', 'exchange', 'IssuePaid', userId, String(amount), memo);
+  }
+
+  /** PAID 잔액 조회 */
+  async getPaidBalance(userId: string): Promise<number> {
+    if (!this.useFabric) return 0;
+    const res = await this.evaluate('naver-channel', 'exchange', 'GetPaidBalance', userId);
+    return parseInt(res || '0', 10);
   }
 }

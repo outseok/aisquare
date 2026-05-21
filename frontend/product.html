@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>상품 상세 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .product-section { padding: 48px 0 96px; }
+      .pd-grid { display: grid; grid-template-columns: 560px 1fr; gap: 48px; align-items: flex-start; }
+      .pd-cover { width: 100%; aspect-ratio: 4/3; border-radius: 16px; overflow: hidden; background: #f4f6fa; box-shadow: 0 18px 38px rgba(11, 13, 18, 0.10); }
+      .pd-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+      .pd-info .badge { display: inline-block; padding: 4px 10px; background: #eef1ff; color: #1F3AE0; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 14px; }
+      .pd-info h1 { margin: 0 0 14px; font-size: 28px; line-height: 1.35; letter-spacing: -0.4px; color: #1f2a38; }
+      .pd-rating { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; color: #677181; font-size: 14px; }
+      .pd-rating .star { color: #f5a623; font-weight: 900; }
+      .pd-rating em { font-style: normal; color: #1f2a38; font-weight: 900; }
+      .pd-rating .div { width: 1px; height: 12px; background: #ececf0; }
+
+      .pd-price-box { background: #f8f9fb; border-radius: 14px; padding: 22px 26px; margin-bottom: 22px; }
+      .pd-price-box .label { color: #87909d; font-size: 12.5px; letter-spacing: 0.05em; font-weight: 800; }
+      .pd-price-box .price { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+      .pd-price-box .price b { font-size: 32px; font-weight: 900; color: #1f2a38; letter-spacing: -0.3px; }
+      .pd-price-box .price span { color: #677181; font-size: 14px; font-weight: 700; }
+      .pd-price-box .point-info { margin-top: 12px; color: #1F3AE0; font-size: 13px; font-weight: 700; }
+
+      .pd-seller { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #ececf0; border-radius: 12px; margin-bottom: 24px; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+      .pd-seller:hover { border-color: #1F3AE0; background: #fcfcff; }
+      .pd-seller .av { width: 38px; height: 38px; border-radius: 50%; background: #1F3AE0; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex-shrink: 0; }
+      .pd-seller .info { flex: 1; }
+      .pd-seller .info b { display: block; font-size: 14px; color: #1f2a38; }
+      .pd-seller .info span { display: block; margin-top: 2px; color: #677181; font-size: 12.5px; }
+      .pd-seller .arrow { color: #87909d; font-weight: 900; }
+
+      .pd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+      .pd-btn { height: 50px; border: 1px solid #d4dae4; background: #fff; color: #1f2a38; border-radius: 8px; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.08s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+      .pd-btn .pd-icn { font-size: 17px; line-height: 1; }
+      .pd-btn:hover { background: #f4f6fa; border-color: #1F3AE0; color: #1F3AE0; }
+      .pd-btn:active { transform: scale(0.98); }
+      /* Active state — wish heart goes red, cart goes blue-filled */
+      #pdWish[data-state="on"] {
+        background: #ffeded; border-color: #ff3357; color: #ff3357;
+      }
+      #pdWish[data-state="on"] .pd-icn { color: #ff3357; font-size: 18px; }
+      #pdWish[data-state="on"]:hover { background: #ffd6dd; }
+      #pdCart[data-state="on"] {
+        background: #eef1ff; border-color: #1F3AE0; color: #1F3AE0;
+      }
+      #pdCart[data-state="on"]:hover { background: #dee4ff; }
+      .pd-buy:disabled { opacity: 0.7; cursor: not-allowed; }
+      .pd-buy { width: 100%; height: 56px; background: #050505; color: #fff; border: 0; border-radius: 8px; font-size: 16px; font-weight: 900; cursor: pointer; transition: background 0.15s ease, transform 0.08s ease; }
+      .pd-buy:hover { background: #1F3AE0; }
+      .pd-buy:active { transform: scale(0.98); }
+
+      .pd-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; padding-top: 24px; border-top: 1px solid #ececf0; }
+      .pd-meta-item { font-size: 13px; }
+      .pd-meta-item .k { display: block; color: #87909d; margin-bottom: 4px; font-weight: 700; }
+      .pd-meta-item .v { color: #1f2a38; font-weight: 700; }
+
+      .pd-sections { margin-top: 64px; display: grid; grid-template-columns: 1fr; gap: 48px; }
+      .pd-block h2 { margin: 0 0 16px; font-size: 22px; letter-spacing: -0.2px; }
+      .pd-block p { margin: 0; color: #3f4a59; font-size: 15px; line-height: 1.75; }
+
+      .pd-reviews { display: flex; flex-direction: column; gap: 12px; }
+      .pd-review { padding: 18px 22px; border: 1px solid #ececf0; border-radius: 12px; background: #fff; }
+      .pd-review .head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+      .pd-review .head .av { width: 28px; height: 28px; border-radius: 50%; background: #f4f6fa; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #677181; }
+      .pd-review .head b { color: #1f2a38; }
+      .pd-review .head .star { margin-left: auto; color: #f5a623; font-weight: 900; }
+      .pd-review p { margin: 0; color: #3f4a59; font-size: 14px; line-height: 1.6; }
+
+      .pd-empty { padding: 80px 0; text-align: center; color: #87909d; }
+
+      @media (max-width: 960px) {
+        .pd-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Product">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="product-section">
+        <div class="kmong-wrap">
+          <div id="productRoot">
+            <div class="pd-empty">상품 정보를 불러오는 중...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+    <script>
+      (async function() {
+        var api = window.AISquareAPI;
+        var qs = new URLSearchParams(location.search);
+        var id = qs.get('id');
+        var root = document.getElementById('productRoot');
+        var t = function(m){ (window.showToast || alert)(m); };
+
+        if (!id) {
+          root.innerHTML = '<div class="pd-empty">상품 ID가 지정되지 않았습니다.<br /><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 이동</a></div>';
+          return;
+        }
+
+        var product;
+        try { product = await api.products.get(id); } catch (e) {}
+        if (!product) {
+          root.innerHTML = '<div class="pd-empty">해당 상품을 찾을 수 없습니다.<br /><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 돌아가기</a></div>';
+          return;
+        }
+
+        var pointReward = Math.floor(product.priceSquare * 0.02);
+        var fileType = product.fileType || 'PDF';
+        var badge = product.badge ? '<span class="badge">' + product.badge + '</span>' : '<span class="badge">' + (product.tags?.[0]?.toUpperCase() || 'NEW') + '</span>';
+        var stars = '★★★★★'.slice(0, Math.round(product.rating));
+
+        var sellerInitial = (product.sellerName || product.sellerUsername || 'U')[0];
+
+        root.innerHTML = [
+          '<div class="pd-grid">',
+            '<div class="pd-cover"><img src="./assets/' + product.cover + '" alt="' + product.title + '" /></div>',
+            '<div class="pd-info">',
+              badge,
+              '<h1>' + product.title + '</h1>',
+              '<div class="pd-rating">',
+                '<span class="star">' + stars + '</span>',
+                '<em>' + product.rating.toFixed(1) + '</em>',
+                '<span>리뷰 ' + product.reviewCount + '건</span>',
+                '<div class="div"></div>',
+                '<span>' + fileType + ' 파일</span>',
+              '</div>',
+              '<div class="pd-price-box">',
+                '<span class="label">판매 가격</span>',
+                '<div class="price"><b>' + product.priceSquare.toLocaleString() + '</b><span>Square</span></div>',
+                '<div class="point-info">+ 구매 확정 시 ' + pointReward + ' Point 적립 (2%)</div>',
+              '</div>',
+              '<div class="pd-seller" id="pdSeller" data-username="' + product.sellerUsername + '">',
+                '<div class="av">' + sellerInitial + '</div>',
+                '<div class="info"><b>' + product.sellerName + '</b><span id="pdSellerStats">불러오는 중...</span></div>',
+                '<div class="arrow">›</div>',
+              '</div>',
+              '<div class="pd-actions">',
+                '<button class="pd-btn" id="pdWish" data-state="off"><span class="pd-icn">♡</span><span class="pd-label">찜하기</span></button>',
+                '<button class="pd-btn" id="pdCart" data-state="off"><span class="pd-icn">🛒</span><span class="pd-label">장바구니</span></button>',
+              '</div>',
+              '<button class="pd-buy" id="pdBuy">' + product.priceSquare.toLocaleString() + ' Square로 바로 구매</button>',
+              '<div class="pd-meta">',
+                '<div class="pd-meta-item"><span class="k">카테고리</span><span class="v">' + (product.category || '-') + '</span></div>',
+                '<div class="pd-meta-item"><span class="k">등록일</span><span class="v">' + (product.createdAt || '-') + '</span></div>',
+                '<div class="pd-meta-item"><span class="k">파일 형식</span><span class="v">' + fileType + '</span></div>',
+                '<div class="pd-meta-item"><span class="k">구매 확정</span><span class="v">72시간 자동</span></div>',
+              '</div>',
+            '</div>',
+          '</div>',
+          '<div class="pd-sections">',
+            '<div class="pd-block">',
+              '<h2>이 상품은 어떤 노하우인가요?</h2>',
+              '<p>실무에서 검증된 ' + (product.tags || []).join(' · ') + ' 노하우를 즉시 활용할 수 있는 형태로 정리한 자료입니다. 다운로드 후 자유롭게 수정·재가공하여 사용하실 수 있으며, 72시간 자동 확정 정책으로 안전하게 거래됩니다.</p>',
+            '</div>',
+            '<div class="pd-block">',
+              '<h2>구매자 리뷰 <span style="color:#87909d;font-weight:700;font-size:16px;">(' + product.reviewCount + ')</span></h2>',
+              '<div class="pd-reviews">',
+                '<div class="pd-review"><div class="head"><span class="av">K</span><b>kim.work</b><span class="star">★ 5.0</span></div><p>실무에 바로 적용할 수 있는 구체적인 프롬프트와 시트가 잘 정리되어 있어요. 강력 추천합니다.</p></div>',
+                '<div class="pd-review"><div class="head"><span class="av">M</span><b>mkt.lab</b><span class="star">★ 4.8</span></div><p>가격 대비 정말 만족스러운 자료였습니다. 처음 입문하시는 분들께 좋을 것 같아요.</p></div>',
+                '<div class="pd-review"><div class="head"><span class="av">D</span><b>devmate</b><span class="star">★ 4.9</span></div><p>이번 분기 가장 잘 산 자료 중 하나. 사이트 평점이 진짜네요.</p></div>',
+              '</div>',
+            '</div>',
+          '</div>'
+        ].join('');
+
+        // Wire actions — initialize button states from BE
+        const wishBtn = document.getElementById('pdWish');
+        const cartBtn = document.getElementById('pdCart');
+        const buyBtn  = document.getElementById('pdBuy');
+
+        function setWishState(on) {
+          wishBtn.dataset.state = on ? 'on' : 'off';
+          wishBtn.querySelector('.pd-icn').textContent = on ? '❤' : '♡';
+          wishBtn.querySelector('.pd-label').textContent = on ? '찜됨' : '찜하기';
+        }
+        function setCartState(on) {
+          cartBtn.dataset.state = on ? 'on' : 'off';
+          cartBtn.querySelector('.pd-icn').textContent = on ? '✓🛒' : '🛒';
+          cartBtn.querySelector('.pd-label').textContent = on ? '담김' : '장바구니';
+        }
+
+        // Sync initial state from BE wishlist/cart
+        if (api.isLoggedIn()) {
+          (async () => {
+            try {
+              const [w, c] = await Promise.all([
+                api.wishlist.getList().catch(() => []),
+                api.cart.getList().catch(() => []),
+              ]);
+              if ((w || []).some(p => p.id === product.id)) setWishState(true);
+              if ((c || []).some(p => p.id === product.id)) setCartState(true);
+            } catch (e) { /* ignore */ }
+          })();
+        }
+
+        wishBtn.addEventListener('click', async function() {
+          if (!api.isLoggedIn()) { t('로그인이 필요합니다.'); setTimeout(function(){ location.href='./login.html'; }, 800); return; }
+          const wasOn = wishBtn.dataset.state === 'on';
+          try {
+            if (wasOn) { await api.wishlist.remove(product.id); setWishState(false); t('찜에서 제거했습니다.'); }
+            else      { await api.wishlist.add(product.id);    setWishState(true);  t('찜 목록에 추가했습니다.'); }
+          } catch (e) {
+            if (/이미/.test(e.message)) { setWishState(true); t('이미 찜한 상품입니다.'); }
+            else t(e.message || '찜 처리에 실패했습니다.');
+          }
+        });
+        cartBtn.addEventListener('click', async function() {
+          if (!api.isLoggedIn()) { t('로그인이 필요합니다.'); setTimeout(function(){ location.href='./login.html'; }, 800); return; }
+          const wasOn = cartBtn.dataset.state === 'on';
+          try {
+            if (wasOn) { await api.cart.remove(product.id); setCartState(false); t('장바구니에서 제거했습니다.'); }
+            else      { await api.cart.add(product.id);    setCartState(true);  t('장바구니에 담았습니다.'); }
+          } catch (e) {
+            if (/이미/.test(e.message)) { setCartState(true); t('이미 장바구니에 있는 상품입니다.'); }
+            else t(e.message || '장바구니 처리에 실패했습니다.');
+          }
+        });
+
+        buyBtn.addEventListener('click', async function() {
+          if (!api.isLoggedIn() || !api.getJwt()) {
+            t('로그인이 필요합니다.');
+            setTimeout(function(){ location.href='./login.html'; }, 800);
+            return;
+          }
+          // 결제 페이지(checkout)로 이동 — 거기서 Toss/Square/Point 복합 결제 선택
+          location.href = './checkout.html?id=' + encodeURIComponent(product.id);
+          return;
+
+          // 아래 코드는 Toss 콜백 처리용으로 남겨둠 (toss=success/fail 쿼리로 돌아오면 confirm)
+          const me = api.getCurrentUser() || {};
+          if (!me.phoneVerified && !me.passVerified) {
+            t('PASS 본인인증이 필요합니다. 마이페이지에서 인증해 주세요.');
+            setTimeout(function(){ location.href='./mypage.html'; }, 1200);
+            return;
+          }
+          buyBtn.disabled = true;
+          const originalText = buyBtn.textContent;
+          buyBtn.textContent = '결제 처리 중...';
+          try {
+            const cfg = await api.payments.tossConfig();
+            const reqRes = await api.payments.requestProductPay(product.id);
+
+            // Dev bypass — BE has TOSS_DEV_BYPASS=1: skip Toss SDK + confirm directly.
+            if (cfg.devBypass) {
+              await api.payments.confirmProductPay('dev-fake-key', reqRes.tossOrderId, reqRes.amountKrw);
+              t('결제가 완료되었습니다. 마이페이지로 이동합니다...');
+              setTimeout(function(){ location.href='./mypage.html?tab=purchases'; }, 1200);
+              return;
+            }
+
+            // 2. Real flow — load Toss SDK and open payment widget
+            if (!window.TossPayments) {
+              await new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = 'https://js.tosspayments.com/v1/payment';
+                s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+              });
+            }
+            const tossPayments = TossPayments(cfg.clientKey);
+            const successUrl = location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=success&amount=' + reqRes.amountKrw;
+            const failUrl = location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=fail';
+            tossPayments.requestPayment('카드', {
+              amount: reqRes.amountKrw,
+              orderId: reqRes.tossOrderId,
+              orderName: reqRes.orderName,
+              successUrl: successUrl,
+              failUrl: failUrl,
+              customerName: (api.getCurrentUser() && api.getCurrentUser().nickname) || '구매자',
+            });
+          } catch (err) {
+            console.error('buy failed:', err);
+            buyBtn.disabled = false;
+            buyBtn.textContent = originalText;
+            if (err.status === 401) t('로그인 세션이 만료됐습니다. 다시 로그인해 주세요.');
+            else if (err.status === 403) t('PASS 본인인증이 필요합니다.');
+            else if (err.status === 400 && /이미|판매/.test(err.message)) t('이미 판매된 상품입니다.');
+            else t(err.message || '결제 요청 실패');
+          }
+        });
+
+        // Handle Toss success callback (return from Toss with ?paymentKey&orderId&amount)
+        var p = new URLSearchParams(location.search);
+        if (p.get('toss') === 'success' && p.get('paymentKey') && p.get('orderId') && p.get('amount')) {
+          (async function(){
+            try {
+              await api.payments.confirmProductPay(p.get('paymentKey'), p.get('orderId'), parseInt(p.get('amount'),10));
+              t('결제가 완료되었습니다.');
+              setTimeout(function(){ location.href='./mypage.html?tab=purchases'; }, 1200);
+            } catch (e) { t('결제 승인 실패: ' + (e.message||'')); }
+          })();
+        }
+        if (p.get('toss') === 'fail') { t('결제가 취소되었거나 실패했습니다.'); }
+
+        // Fetch seller stats and display rating + total sold inline
+        (async () => {
+          if (!product.sellerUsername) return;
+          try {
+            const s = await api.products.sellerStats(product.sellerUsername);
+            const avg = (s.avgRating || 0).toFixed(1);
+            const star = '★'.repeat(Math.round(s.avgRating || 0)) + '☆'.repeat(5 - Math.round(s.avgRating || 0));
+            const el = document.getElementById('pdSellerStats');
+            if (el) el.innerHTML = `<span style="color:#f5a623;font-weight:900;">${star}</span> ${avg} · 리뷰 ${s.reviewCount || 0}건 · 판매 ${s.totalSold || 0}건`;
+          } catch (e) { /* keep default */ }
+        })();
+        document.getElementById('pdSeller').addEventListener('click', function() {
+          if (!product.sellerUsername) return;
+          location.href = './seller.html?u=' + encodeURIComponent(product.sellerUsername);
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -19,7 +19,7 @@ model User {
   emailVerified    Boolean    @default(false)
   isAdmin          Boolean    @default(false)
   status           UserStatus @default(ACTIVE)
-  trustToken       Float      @default(15)
+  trustToken       Float      @default(10)
   bio              String?  @db.Text
   passId           String?
   squareWalletAddr String?
@@ -142,13 +142,33 @@ model PointLog {
   userId    String
   user      User         @relation(fields: [userId], references: [id])
   type      PointLogType
+  category  PointCategory @default(ACTIVITY)
   amount    Int
   balance   Int
   memo      String?
+  // 네이버 전환 시 해당 Exchange 레코드 ID
+  exchangeId String?
 
   createdAt DateTime @default(now())
 
+  @@index([userId, category])
   @@map("point_logs")
+}
+
+model NaverPointExchange {
+  id            String   @id @default(cuid())
+  userId        String
+  amountPaid    Int      // 차감된 AISquare PAID 포인트
+  direction     String   // "AISQUARE_TO_NAVER" or "NAVER_TO_AISQUARE"
+  status        String   @default("PENDING") // PENDING / CONFIRMED / REJECTED
+  naverTxId     String?  // 네이버 측 트랜잭션 ID
+  fabricTxId    String?  // 체인코드 호출 TxID
+  rejectReason  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@map("naver_point_exchanges")
 }
 
 model Wishlist {
@@ -260,6 +280,15 @@ enum PointLogType {
   USE_PURCHASE
   CHARGE
   CONVERT
+  EARN_PAID         // PAID 포인트 적립 (충전, 결제 캐시백)
+  EARN_ACTIVITY     // ACTIVITY 포인트 적립 (리뷰, 출석 등)
+  NAVER_EXCHANGE_OUT // PAID → NaverPay (차감)
+  NAVER_EXCHANGE_IN  // NaverPay → PAID (적립)
+}
+
+enum PointCategory {
+  PAID      // 결제 포인트 — NaverPay 전환 가능
+  ACTIVITY  // 웹 사용 포인트 — 전환 불가, 사이트 내 사용만
 }
 
 enum TokenLogType {
@@ -284,3 +313,21 @@ enum VerifyStatus {
   SUCCESS
   FAILED
 }
+
+model TossPayment {
+  id           String   @id @default(cuid())
+  userId       String
+  tossOrderId  String   @unique
+  paymentKey   String?
+  amount       Int
+  purpose      String
+  status       String   @default("PENDING")
+  relatedId    String?
+  rpGranted    Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@map("toss_payments")
+}
+

@@ -13,7 +13,7 @@ import { QueryProductDto } from './dto/query-product.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PassVerifiedGuard } from '../auth/pass-verified.guard';
 import { FilesService } from '../files/files.service';
-import { FileType } from '@prisma/client';
+import { FileType } from '../common/prisma-enums';
 
 const FILE_TYPE_MAP: Record<string, FileType> = {
   'application/pdf': 'PDF',

@@ -12,6 +12,12 @@ import { UpdateBioDto } from './dto/update-bio.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Get('imp-config')
+  @ApiOperation({ summary: 'PortOne 가맹점 식별코드 (프론트엔드 SDK init용)' })
+  getImpConfig() {
+    return { impCode: process.env.IMP_CODE || null };
+  }
+
   @Post('register')
   @ApiOperation({ summary: '회원가입' })
   register(@Body() dto: RegisterDto) {

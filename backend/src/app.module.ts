@@ -16,6 +16,7 @@ import { CartModule } from './cart/cart.module';
 import { FabricModule } from './fabric/fabric.module';
 import { PointsModule } from './points/points.module';
 import { WalletModule } from './wallet/wallet.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { WalletModule } from './wallet/wallet.module';
     FabricModule,
     PointsModule,
     WalletModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

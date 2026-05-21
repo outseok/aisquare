@@ -243,41 +243,65 @@ export class OrdersService {
     return latest?.balance || 0;
   }
 
-  // 구매 확정 시 구매자·판매자 각 2% Point 캐시백 (기획서 4.4절)
+  // 구매 확정 시 구매자·판매자 각 2% ACTIVITY Point 캐시백 + 플랫폼 6% 기록 (기획서 4.4절)
   private async grantConfirmCashback(buyerId: string, sellerId: string, price: number, productTitle: string) {
     const cashback = Math.floor(price * 0.02);
-    if (cashback <= 0) return;
+    const platformRev = Math.floor(price * 0.06);
 
     const [buyerBalance, sellerBalance] = await Promise.all([
       this.getPointBalance(buyerId),
       this.getPointBalance(sellerId),
     ]);
 
-    await this.prisma.pointLog.create({
-      data: {
-        userId: buyerId,
-        type: 'EARN_BONUS',
-        amount: cashback,
-        balance: buyerBalance + cashback,
-        memo: `구매 확정 캐시백: ${productTitle}`,
-      },
-    });
-    await this.prisma.pointLog.create({
-      data: {
-        userId: sellerId,
-        type: 'EARN_BONUS',
-        amount: cashback,
-        balance: sellerBalance + cashback,
-        memo: `판매 확정 캐시백: ${productTitle}`,
-      },
-    });
+    if (cashback > 0) {
+      await this.prisma.pointLog.create({
+        data: {
+          userId: buyerId,
+          type: 'EARN_ACTIVITY',
+          category: 'ACTIVITY',  // 캐시백 = 활동 포인트 (전환 불가)
+          amount: cashback,
+          balance: buyerBalance + cashback,
+          memo: `구매 확정 캐시백 2%: ${productTitle}`,
+        },
+      });
+      await this.prisma.pointLog.create({
+        data: {
+          userId: sellerId,
+          type: 'EARN_ACTIVITY',
+          category: 'ACTIVITY',
+          amount: cashback,
+          balance: sellerBalance + cashback,
+          memo: `판매 확정 캐시백 2%: ${productTitle}`,
+        },
+      });
+    }
+
+    // 플랫폼 수익 6% — adminLog로 기록 (회계용)
+    if (platformRev > 0) {
+      await this.prisma.adminLog.create({
+        data: {
+          adminId: 'system',
+          action: 'PLATFORM_REVENUE',
+          targetId: productTitle,
+          meta: { sellerId, buyerId, price, platformRevenue: platformRev, rate: 0.06 },
+        },
+      });
+    }
   }
 
-  // BE2 에스크로 해제 stub — BE2 API 완성 시 실구현으로 교체
+  // Fabric internal-channel wallet chaincode로 에스크로 settle (90% 판매자 정산)
   private async releaseEscrow(orderId: string, sellerId: string, price: number) {
+    const settlement = Math.floor(price * 0.9);
+    try {
+      await this.fabric.settleEscrow(orderId);
+      this.logger.log(`Fabric settleEscrow 완료: order=${orderId} seller=${sellerId} 90%=${settlement}`);
+    } catch (e: any) {
+      this.logger.warn(`Fabric settleEscrow 실패 (DB는 정산 완료): ${e?.message}`);
+    }
+    // (선택) 외부 BE2 API 호환 — 기존 stub은 유지
     const be2Url = process.env.BE2_API_URL;
     if (!be2Url) {
-      this.logger.warn(`BE2 에스크로 해제 스킵 (orderId=${orderId}, settlement=${Math.floor(price * 0.9)}원)`);
+      this.logger.log(`BE2 에스크로 해제 외부 호출 스킵 (Fabric 내부 처리만)`);
       return;
     }
     try {

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>랭킹 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body data-screen-label="AISquare Ranking">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a class="active" href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="ranking-section">
+        <div class="ranking-hero">
+          <div class="kmong-wrap">
+            <div>
+              <span class="eyebrow">RANKING · 2026 WEEK 21</span>
+              <h1>이번 주, 가장 많이 거래된<br />AI 노하우와 판매자</h1>
+              <p>판매량·평점·구매 확정률로 집계한 베스트셀러를 만나보세요.</p>
+            </div>
+            <div class="ranking-tabs" id="rankingTabs">
+              <button class="is-active" data-range="week">이번 주</button>
+              <button data-range="month">이번 달</button>
+              <button data-range="all">전체</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="kmong-wrap">
+          <div class="market-block">
+            <h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg><mark>TOP 3</mark> 노하우</h2>
+            <p class="sub">이번 주 거래량 기준 상위 3개의 베스트셀러입니다.</p>
+            <div class="podium" id="podium"></div>
+          </div>
+
+          <div class="ranking-board">
+            <article class="ranking-card">
+              <div class="head">
+                <h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>인기 노하우 TOP 10</h2>
+                <a href="./market.html" class="more">마켓 전체</a>
+              </div>
+              <div class="rk-list" id="topProducts"></div>
+            </article>
+
+            <article class="ranking-card">
+              <div class="head">
+                <h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z"/><path d="M5 20h14"/></svg>톱 판매자</h2>
+                <a class="more" href="./about.html?tab=portfolio">전체</a>
+              </div>
+              <div class="rk-list" id="topSellers"></div>
+            </article>
+          </div>
+
+          <section class="ranking-hot">
+            <div class="head">
+              <div>
+                <h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>지금 뜨고 있어요</h2>
+                <p class="sub">최근 등록된 노하우 중 평점이 빠르게 올라가는 8개입니다.</p>
+              </div>
+              <a href="./market.html" class="more" style="font-size:13px;font-weight:800;color:#677181">마켓에서 전체 보기 →</a>
+            </div>
+            <div class="product-grid" id="hotGrid"></div>
+          </section>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+  </body>
+</html>

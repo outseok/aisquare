@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 190" preserveAspectRatio="xMidYMid slice" role="img">
+  <rect width="320" height="190" fill="#fff"></rect>
+  
+  <rect width="320" height="190" fill="#F4F2EC"></rect>
+  
+  <rect x="20" y="20" width="280" height="22" fill="#0B0D12"></rect>
+  <text x="32" y="35" font-family="ui-monospace,Menlo,monospace" font-size="9" fill="#fff" letter-spacing="0.08em">KEYWORD</text>
+  <text x="148" y="35" font-family="ui-monospace,Menlo,monospace" font-size="9" fill="#fff" letter-spacing="0.08em">SEARCH</text>
+  <text x="208" y="35" font-family="ui-monospace,Menlo,monospace" font-size="9" fill="#fff" letter-spacing="0.08em">DIFF</text>
+  <text x="266" y="35" font-family="ui-monospace,Menlo,monospace" font-size="9" fill="#fff" letter-spacing="0.08em">RANK</text>
+  
+    <rect x="20" y="50" width="280" height="22" fill="#fff" stroke="#D9D5C8" stroke-width="0.5"></rect>
+    <text x="32" y="65" font-family="Pretendard,sans-serif" font-size="10" fill="#0B0D12" font-weight="700">gpt-5 활용법</text>
+    <text x="148" y="65" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#0B0D12">12,400</text>
+    <rect x="208" y="55" width="18" height="12" rx="2" fill="#38B987"></rect>
+    <text x="217" y="64" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#fff" font-weight="900" text-anchor="middle">L</text>
+    <text x="266" y="65" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#1F3AE0" font-weight="900">#1</text>
+    <rect x="20" y="72" width="280" height="22" fill="#ECE9DE" stroke="#D9D5C8" stroke-width="0.5"></rect>
+    <text x="32" y="87" font-family="Pretendard,sans-serif" font-size="10" fill="#0B0D12" font-weight="700">프롬프트 엔지니어링</text>
+    <text x="148" y="87" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#0B0D12">8,920</text>
+    <rect x="208" y="77" width="18" height="12" rx="2" fill="#1F3AE0"></rect>
+    <text x="217" y="86" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#fff" font-weight="900" text-anchor="middle">M</text>
+    <text x="266" y="87" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#1F3AE0" font-weight="900">#3</text>
+    <rect x="20" y="94" width="280" height="22" fill="#fff" stroke="#D9D5C8" stroke-width="0.5"></rect>
+    <text x="32" y="109" font-family="Pretendard,sans-serif" font-size="10" fill="#0B0D12" font-weight="700">claude 자동화</text>
+    <text x="148" y="109" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#0B0D12">6,140</text>
+    <rect x="208" y="99" width="18" height="12" rx="2" fill="#38B987"></rect>
+    <text x="217" y="108" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#fff" font-weight="900" text-anchor="middle">L</text>
+    <text x="266" y="109" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#1F3AE0" font-weight="900">#2</text>
+    <rect x="20" y="116" width="280" height="22" fill="#ECE9DE" stroke="#D9D5C8" stroke-width="0.5"></rect>
+    <text x="32" y="131" font-family="Pretendard,sans-serif" font-size="10" fill="#0B0D12" font-weight="700">AI 카피라이팅</text>
+    <text x="148" y="131" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#0B0D12">5,820</text>
+    <rect x="208" y="121" width="18" height="12" rx="2" fill="#1F3AE0"></rect>
+    <text x="217" y="130" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#fff" font-weight="900" text-anchor="middle">M</text>
+    <text x="266" y="131" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#1F3AE0" font-weight="900">#4</text>
+    <rect x="20" y="138" width="280" height="22" fill="#fff" stroke="#D9D5C8" stroke-width="0.5"></rect>
+    <text x="32" y="153" font-family="Pretendard,sans-serif" font-size="10" fill="#0B0D12" font-weight="700">midjourney v7</text>
+    <text x="148" y="153" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#0B0D12">4,210</text>
+    <rect x="208" y="143" width="18" height="12" rx="2" fill="#FF7657"></rect>
+    <text x="217" y="152" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#fff" font-weight="900" text-anchor="middle">H</text>
+    <text x="266" y="153" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#1F3AE0" font-weight="900">#7</text>
+    <rect x="20" y="160" width="280" height="22" fill="#ECE9DE" stroke="#D9D5C8" stroke-width="0.5"></rect>
+    <text x="32" y="175" font-family="Pretendard,sans-serif" font-size="10" fill="#0B0D12" font-weight="700">워크플로 자동화</text>
+    <text x="148" y="175" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#0B0D12">3,560</text>
+    <rect x="208" y="165" width="18" height="12" rx="2" fill="#1F3AE0"></rect>
+    <text x="217" y="174" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#fff" font-weight="900" text-anchor="middle">M</text>
+    <text x="266" y="175" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#1F3AE0" font-weight="900">#5</text>
+  
+  <rect x="14" y="14" width="44" height="22" rx="3" fill="#1F3AE0"></rect>
+  <text x="36" y="30" font-family="ui-monospace,Menlo,monospace" font-size="11" font-weight="900" fill="#fff" text-anchor="middle">PDF</text>
+
+</svg>

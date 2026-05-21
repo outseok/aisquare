@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>판매자 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .seller-section { padding: 56px 0 96px; }
+
+      .seller-hero { background: #fff; border: 1px solid #ececf0; border-radius: 18px; padding: 32px 36px; display: grid; grid-template-columns: 84px 1fr auto; gap: 24px; align-items: flex-start; }
+      .seller-hero .av {
+        width: 84px; height: 84px; border-radius: 50%;
+        background: linear-gradient(135deg, #1F3AE0, #4F2BE8);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-weight: 900; font-size: 34px;
+      }
+      .seller-hero h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
+      .seller-hero .uid { color: #87909d; font-size: 13px; font-family: ui-monospace, Menlo, monospace; }
+      .seller-hero .bio { margin: 10px 0 0; color: #3f4a59; font-size: 14px; line-height: 1.55; max-width: 480px; }
+      .seller-hero .rating-stack { text-align: right; }
+      .seller-hero .rating-stack .big { font-size: 36px; font-weight: 900; color: #f5a623; letter-spacing: -0.5px; line-height: 1; }
+      .seller-hero .rating-stack .stars { font-size: 16px; color: #f5a623; margin: 4px 0 2px; }
+      .seller-hero .rating-stack .meta { font-size: 12px; color: #677181; font-weight: 700; }
+
+      /* Trust token gauge — 당근 매너온도 style */
+      .trust-card { background: #fff; border: 1px solid #ececf0; border-radius: 18px; padding: 24px 28px; margin-top: 16px; }
+      .trust-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+      .trust-head .title { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 15px; color: #1f2a38; }
+      .trust-head .title svg { color: #1F3AE0; }
+      .trust-head .tier { padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 900; }
+      .trust-head .tier.cold  { background: #eef1f5; color: #677181; }
+      .trust-head .tier.warm  { background: #fef6e0; color: #b87705; }
+      .trust-head .tier.hot   { background: #ffe3d6; color: #c8331f; }
+      .trust-head .tier.elite { background: #def8ea; color: #1f8a5b; }
+      .trust-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+      .trust-row .num { font-size: 38px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+      .trust-row .num.cold  { color: #677181; }
+      .trust-row .num.warm  { color: #f5a623; }
+      .trust-row .num.hot   { color: #ff6a3d; }
+      .trust-row .num.elite { color: #34a853; }
+      .trust-row .unit { color: #87909d; font-size: 14px; font-weight: 700; }
+      .trust-row .delta { margin-left: auto; color: #87909d; font-size: 12.5px; }
+      .trust-bar { position: relative; height: 10px; background: #f1f3f6; border-radius: 999px; overflow: hidden; }
+      .trust-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #cdd3dc 0%, #f5a623 35%, #ff6a3d 65%, #34a853 100%); border-radius: 999px; transition: width 0.6s cubic-bezier(.4,1.2,.5,1); }
+      .trust-ticks { display: flex; justify-content: space-between; margin-top: 6px; color: #aab3c0; font-size: 11px; font-weight: 700; }
+      .trust-hint { margin-top: 12px; color: #677181; font-size: 12.5px; line-height: 1.5; }
+
+      .seller-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 28px 0 36px; }
+      .seller-stat { background: #f8f9fb; border-radius: 12px; padding: 18px 22px; }
+      .seller-stat .lbl { color: #87909d; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; }
+      .seller-stat .val { margin-top: 6px; font-size: 24px; font-weight: 900; color: #1f2a38; letter-spacing: -0.3px; }
+      .seller-stat .val em { font-style: normal; font-size: 14px; color: #677181; font-weight: 700; margin-left: 3px; }
+
+      /* 2-column body: products(left) + reviews(right) */
+      .seller-body { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: flex-start; }
+      .seller-products h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.2px; }
+      .seller-products .sub { color: #677181; font-size: 13.5px; margin: 0 0 20px; }
+      .seller-products .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
+      .seller-reviews { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 24px 24px 20px; position: sticky; top: 120px; }
+      .seller-reviews h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; }
+      .seller-reviews .sub { color: #87909d; font-size: 12.5px; margin: 0 0 18px; }
+      .review-list { display: flex; flex-direction: column; gap: 14px; max-height: 600px; overflow-y: auto; padding-right: 4px; }
+      .review-item { padding: 12px 14px; background: #f8f9fb; border-radius: 10px; }
+      .review-item .top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12.5px; }
+      .review-item .top .av { width: 22px; height: 22px; border-radius: 50%; background: #1F3AE0; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; }
+      .review-item .top b { color: #1f2a38; }
+      .review-item .top .star { color: #f5a623; font-weight: 900; margin-left: auto; }
+      .review-item .top .date { color: #87909d; font-size: 11.5px; margin-left: 6px; }
+      .review-item .content { color: #3f4a59; font-size: 13px; line-height: 1.55; }
+      .review-item .product { color: #87909d; font-size: 11.5px; margin-top: 4px; }
+      .review-empty { text-align: center; color: #87909d; padding: 40px 0; font-size: 13px; }
+
+      .seller-empty { padding: 60px 0; text-align: center; color: #87909d; font-size: 14px; }
+
+      @media (max-width: 960px) {
+        .seller-hero { grid-template-columns: 64px 1fr; padding: 22px; }
+        .seller-hero .av { width: 64px; height: 64px; font-size: 26px; }
+        .seller-hero .rating-stack { grid-column: 1 / -1; text-align: left; padding-top: 14px; border-top: 1px solid #ececf0; }
+        .seller-stats { grid-template-columns: repeat(2, 1fr); }
+        .seller-body { grid-template-columns: 1fr; }
+        .seller-products .product-grid { grid-template-columns: 1fr; }
+        .seller-reviews { position: static; }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Seller">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="seller-section">
+        <div class="kmong-wrap">
+          <div id="sellerRoot">
+            <div class="seller-empty">판매자 정보를 불러오는 중...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+    <script>
+      (async function() {
+        var api = window.AISquareAPI;
+        var qs = new URLSearchParams(location.search);
+        var username = qs.get('u');
+        var root = document.getElementById('sellerRoot');
+
+        if (!username) {
+          root.innerHTML = '<div class="seller-empty">판매자가 지정되지 않았습니다.<br><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 돌아가기</a></div>';
+          return;
+        }
+
+        // Trust token tier — 0~100 (당근 매너온도 style)
+        function trustTier(t) {
+          if (t < 30)  return { key: 'cold',  label: '신규 판매자',     hint: '거래·리뷰가 쌓이면 신뢰도가 올라갑니다.' };
+          if (t < 50)  return { key: 'warm',  label: '활동 판매자',     hint: '꾸준히 거래 중인 판매자입니다.' };
+          if (t < 70)  return { key: 'hot',   label: '신뢰 판매자',     hint: '많은 구매자들에게 신뢰받고 있어요.' };
+          return        { key: 'elite', label: 'VIP 신뢰 판매자',  hint: '최상위 신뢰도를 가진 판매자입니다.' };
+        }
+
+        try {
+          var stats = await api.products.sellerStats(username);
+          if (!stats || !stats.username) throw new Error('판매자 없음');
+          var fullRating = Math.round(stats.avgRating || 0);
+          var stars = '★'.repeat(fullRating) + '☆'.repeat(5 - fullRating);
+          var avgText = (stats.avgRating || 0).toFixed(1);
+          var initial = (stats.nickname || stats.name || stats.username || 'S')[0];
+
+          var tt = Math.max(0, Math.min(100, stats.trustToken || 0));
+          var tier = trustTier(tt);
+
+          // Fetch seller's products
+          var all = await api.products.list({ limit: 100 });
+          var items = (all.items || []).filter(p => (p.sellerUsername === username) || (p.seller && p.seller.username === username));
+
+          // Aggregate all reviews from this seller's products (newest first)
+          var allReviews = [];
+          await Promise.all(items.map(async p => {
+            try {
+              const rs = await api.reviews.forProduct(p.id);
+              (rs || []).forEach(r => allReviews.push(Object.assign({}, r, { productTitle: p.title })));
+            } catch (e) {}
+          }));
+          allReviews.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+          var recent = allReviews.slice(0, 8);
+
+          root.innerHTML = `
+            <div class="seller-hero">
+              <div class="av">${initial}</div>
+              <div class="info">
+                <h1>${stats.nickname || stats.name || ''}</h1>
+                <div class="uid">@${stats.username}</div>
+                ${stats.bio ? `<p class="bio">${stats.bio}</p>` : `<p class="bio" style="color:#aab3c0;font-style:italic;">소개글이 아직 없습니다.</p>`}
+              </div>
+              <div class="rating-stack">
+                <div class="big">${avgText}</div>
+                <div class="stars">${stars}</div>
+                <div class="meta">리뷰 ${stats.reviewCount || 0}건</div>
+              </div>
+            </div>
+
+            <div class="trust-card">
+              <div class="trust-head">
+                <div class="title">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 9.3 8 10 4.5-.7 8-5 8-10V6l-8-4z"/><path d="m9 12 2 2 4-4"/></svg>
+                  신뢰 토큰
+                </div>
+                <span class="tier ${tier.key}">${tier.label}</span>
+              </div>
+              <div class="trust-row">
+                <span class="num ${tier.key}">${tt.toFixed(1)}</span>
+                <span class="unit">/ 100</span>
+                <span class="delta">기본 15 · 거래 확정 +1.0 · 리뷰 5점 +0.5 · 신고 −3</span>
+              </div>
+              <div class="trust-bar"><div class="fill" style="width:${tt}%"></div></div>
+              <div class="trust-ticks">
+                <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+              </div>
+              <p class="trust-hint">${tier.hint}</p>
+            </div>
+
+            <div class="seller-stats">
+              <div class="seller-stat"><div class="lbl">총 판매</div><div class="val">${stats.totalSold || 0}<em>건</em></div></div>
+              <div class="seller-stat"><div class="lbl">평균 평점</div><div class="val">${avgText}<em>점</em></div></div>
+              <div class="seller-stat"><div class="lbl">리뷰 수</div><div class="val">${stats.reviewCount || 0}<em>건</em></div></div>
+              <div class="seller-stat"><div class="lbl">판매 상품</div><div class="val">${items.length}<em>건</em></div></div>
+            </div>
+
+            <div class="seller-body">
+              <div class="seller-products">
+                <h2>판매 중인 노하우</h2>
+                <p class="sub">${items.length}개의 노하우를 판매하고 있습니다.</p>
+                ${items.length === 0
+                  ? '<div class="seller-empty">판매 중인 노하우가 없습니다.</div>'
+                  : '<div class="product-grid">' + items.map(p => productCardHtml(p)).join('') + '</div>'}
+              </div>
+
+              <aside class="seller-reviews">
+                <h3>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  최근 리뷰
+                </h3>
+                <p class="sub">${allReviews.length}개의 리뷰 중 최신 ${Math.min(8, allReviews.length)}건</p>
+                ${recent.length === 0
+                  ? '<div class="review-empty">아직 리뷰가 없습니다.</div>'
+                  : '<div class="review-list">' + recent.map(reviewHtml).join('') + '</div>'}
+              </aside>
+            </div>
+          `;
+
+          root.querySelectorAll('.pcard[data-id]').forEach(el => {
+            el.addEventListener('click', () => { location.href = './product.html?id=' + encodeURIComponent(el.dataset.id); });
+          });
+
+        } catch (e) {
+          console.error(e);
+          root.innerHTML = '<div class="seller-empty">판매자를 찾을 수 없습니다.<br><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 이동</a></div>';
+        }
+
+        function productCardHtml(p) {
+          var st = (p.rating || 0).toFixed(1);
+          return `<article class="pcard" data-id="${p.id}" style="cursor:pointer;">
+            <div class="cover"><img src="./assets/${p.cover}" alt="" /></div>
+            <h4>${p.title}</h4>
+            <div class="meta"><span class="star">★ ${st}</span><span>(${p.reviewCount || 0})</span></div>
+            <div class="price">${(p.priceSquare || 0).toLocaleString()}<em style="font-style:normal;font-size:11px;font-weight:800;color:#677181;margin-left:4px">SQ</em></div>
+            <div class="seller">${p.sellerName || ''}</div>
+          </article>`;
+        }
+
+        function reviewHtml(r) {
+          var rt = r.rating || 0;
+          var starsR = '★'.repeat(rt) + '☆'.repeat(5 - rt);
+          var who = (r.reviewer && (r.reviewer.name || r.reviewer.username)) || '익명';
+          var initial = (who[0] || 'A').toUpperCase();
+          var dt = r.createdAt ? new Date(r.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }) : '';
+          return `<div class="review-item">
+            <div class="top">
+              <span class="av">${initial}</span>
+              <b>${who}</b>
+              <span class="star">${starsR}</span>
+              <span class="date">${dt}</span>
+            </div>
+            <div class="content">${escapeHtml(r.content || '')}</div>
+            ${r.productTitle ? `<div class="product">— ${escapeHtml(r.productTitle)}</div>` : ''}
+          </div>`;
+        }
+        function escapeHtml(s) {
+          return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+      })();
+    </script>
+  </body>
+</html>

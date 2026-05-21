@@ -3,7 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto, SortOrder } from './dto/query-product.dto';
-import { FileType, Prisma } from '@prisma/client';
+import { FileType } from '../common/prisma-enums';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {

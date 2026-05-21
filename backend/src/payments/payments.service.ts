@@ -25,7 +25,10 @@ export class PaymentsService {
   ) {}
 
   getTossClientKey() {
-    return { clientKey: process.env.TOSS_CLIENT_KEY };
+    return {
+      clientKey: process.env.TOSS_CLIENT_KEY,
+      devBypass: process.env.TOSS_DEV_BYPASS === '1',
+    };
   }
 
   // ── RP 충전 ────────────────────────────────────────────────────────────────
@@ -78,9 +81,10 @@ export class PaymentsService {
         data: {
           userId,
           type: 'CHARGE',
+          category: 'PAID',   // 결제 포인트 — 네이버 전환 가능
           amount: rpAmount,
           balance: balance + rpAmount,
-          memo: `토스 충전 ${dto.amount.toLocaleString()}원 → ${rpAmount} RP`,
+          memo: `토스 충전 ${dto.amount.toLocaleString()}원 → ${rpAmount} RP (PAID)`,
         },
       });
 
@@ -89,10 +93,11 @@ export class PaymentsService {
         await tx.pointLog.create({
           data: {
             userId,
-            type: 'CHARGE_BONUS',
+            type: 'EARN_ACTIVITY',  // 충전 보너스는 활동 포인트 (이벤트성)
+            category: 'ACTIVITY',
             amount: bonusRp,
             balance: afterCharge + bonusRp,
-            memo: `충전 적립 보너스 ${bonusRp} RP`,
+            memo: `충전 적립 보너스 ${bonusRp} RP (ACTIVITY)`,
           },
         });
       }
@@ -115,8 +120,11 @@ export class PaymentsService {
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
     if (product.sellerId === buyerId) throw new BadRequestException('본인 상품은 구매할 수 없습니다');
 
-    const priceRp = product.priceRp ?? Math.ceil(Number(product.priceEth) * 10_000_000);
-    const amountKrw = Math.floor((priceRp / 100) * KRW_PER_100RP);
+    // Schema only has `price` (Int) representing the KRW price after our
+    // SQLite migration — use it directly, derive an RP-equivalent for
+    // the bonus calc only.
+    const amountKrw = product.price;
+    const priceRp = Math.floor((amountKrw * 100) / KRW_PER_100RP);
     const tossOrderId = `prod-${uuidv4()}`;
 
     await this.prisma.tossPayment.create({
@@ -170,8 +178,7 @@ export class PaymentsService {
           buyerId,
           productId,
           paymentMethod: 'TOSS',
-          amountEth: product.priceEth,
-          amountRp: priceRp,
+          paymentAmount: dto.amount,
           autoConfirmAt,
           status: 'PENDING_CONFIRMATION',
         },
@@ -200,6 +207,13 @@ export class PaymentsService {
   // ── Toss API 호출 헬퍼 ─────────────────────────────────────────────────────
 
   private async confirmWithToss(paymentKey: string, orderId: string, amount: number) {
+    // Dev mode — short-circuit so a full purchase flow can be demoed without
+    // valid Toss merchant keys (the public docs keys often 401).
+    if (process.env.TOSS_DEV_BYPASS === '1') {
+      this.logger.warn(`[Toss dev bypass] confirm faked for order=${orderId} amount=${amount}`);
+      return { paymentKey, orderId, amount, status: 'DONE' };
+    }
+
     const secretKey = process.env.TOSS_SECRET_KEY!;
     const encoded = Buffer.from(`${secretKey}:`).toString('base64');
 

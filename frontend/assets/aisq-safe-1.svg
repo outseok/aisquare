@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 270" role="img">
+  <defs>
+    <pattern id="bn-grid" width="14" height="14" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.7" fill="#0B0D12" fill-opacity="0.08"></circle>
+    </pattern>
+    <linearGradient id="bn-shadow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0B0D12" stop-opacity="0.10"></stop>
+      <stop offset="100%" stop-color="#0B0D12" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="270" fill="#F4F2EC"></rect>
+  <rect width="360" height="270" fill="url(#bn-grid)"></rect>
+  
+  
+  <rect x="56" y="158" width="248" height="14" rx="3" fill="#ECE9DE" stroke="#D9D5C8" stroke-width="1"></rect>
+  <rect x="64" y="162" width="80" height="6" rx="2" fill="#0B0D12" fill-opacity="0.55"></rect>
+  <rect x="240" y="162" width="56" height="6" rx="2" fill="#0B0D12" fill-opacity="0.25"></rect>
+
+  <rect x="68" y="184" width="224" height="14" rx="3" fill="#ECE9DE" stroke="#D9D5C8" stroke-width="1"></rect>
+  <rect x="76" y="188" width="60" height="6" rx="2" fill="#0B0D12" fill-opacity="0.45"></rect>
+  <rect x="220" y="188" width="50" height="6" rx="2" fill="#0B0D12" fill-opacity="0.2"></rect>
+
+  <rect x="80" y="210" width="200" height="14" rx="3" fill="#ECE9DE" stroke="#D9D5C8" stroke-width="1"></rect>
+  <rect x="88" y="214" width="50" height="6" rx="2" fill="#0B0D12" fill-opacity="0.35"></rect>
+
+  
+  <rect x="44" y="98" width="272" height="50" rx="8" fill="#fff" stroke="#0B0D12" stroke-width="1.5"></rect>
+  <circle cx="76" cy="123" r="10" fill="none" stroke="#0B0D12" stroke-width="2"></circle>
+  <line x1="84" y1="131" x2="92" y2="139" stroke="#0B0D12" stroke-width="3" stroke-linecap="round"></line>
+  
+  <rect x="104" y="115" width="124" height="6" rx="3" fill="#0B0D12"></rect>
+  <rect x="104" y="127" width="78" height="6" rx="3" fill="#0B0D12" fill-opacity="0.45"></rect>
+  
+  <rect x="262" y="110" width="40" height="26" rx="4" fill="#1F3AE0"></rect>
+  <text x="282" y="127" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="700" letter-spacing="0.06em" fill="#fff">GO</text>
+
+  
+  <g transform="translate(296, 72)">
+    <rect width="26" height="26" rx="4" fill="#E4F25C" transform="rotate(15 13 13)"></rect>
+    <text x="13" y="20" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="900" fill="#0B0D12" transform="rotate(15 13 13)">⌕</text>
+  </g>
+
+  
+  <text x="44" y="72" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="700" letter-spacing="0.12em" fill="#1F3AE0">SEARCH</text>
+
+</svg>

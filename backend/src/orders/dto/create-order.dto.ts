@@ -1,6 +1,6 @@
 import { IsString, IsEnum, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PayMethod } from '@prisma/client';
+import { PayMethod } from '../../common/prisma-enums';
 
 export class CreateOrderDto {
   @ApiProperty({ example: 'cuid-product-id' })

@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>이용가이드 — AISquare</title>
+    <meta name="description" content="AISquare에서 AI 노하우를 안전하게 구매하고 판매하는 방법을 단계별로 알아보세요." />
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      /* guide-only tweaks — kept inline to avoid bloating styles.css */
+      .guide-hero { padding: 64px 0 32px; }
+      .guide-hero .eyebrow {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        color: #1F3AE0;
+        background: #eef1ff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        margin-bottom: 18px;
+      }
+      .guide-hero h1 {
+        margin: 0 0 14px;
+        font-size: 44px;
+        line-height: 1.2;
+        letter-spacing: -0.6px;
+      }
+      .guide-hero h1 mark {
+        background: linear-gradient(180deg, transparent 62%, #d6ddff 62%);
+        color: inherit;
+        padding: 0 2px;
+      }
+      .guide-hero p {
+        margin: 0;
+        color: #3f4a59;
+        font-size: 17px;
+        max-width: 640px;
+      }
+
+      .guide-switch {
+        display: inline-flex;
+        gap: 4px;
+        padding: 5px;
+        border-radius: 999px;
+        background: #efeff1;
+        margin: 28px 0 0;
+      }
+      .guide-switch button {
+        min-width: 132px;
+        padding: 10px 22px;
+        border: 0;
+        background: transparent;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 15px;
+        color: var(--kmong-text);
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .guide-switch button:hover:not(.is-active) { background: rgba(0, 0, 0, 0.04); }
+      .guide-switch button.is-active { background: #050505; color: #fff; }
+
+      .guide-section { padding: 56px 0 96px; }
+      .guide-section h2 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        letter-spacing: -0.3px;
+      }
+      .guide-section h2 mark {
+        background: linear-gradient(180deg, transparent 62%, #d6ddff 62%);
+        color: inherit;
+        padding: 0 2px;
+      }
+      .guide-section .sub {
+        margin: 0 0 32px;
+        color: #677181;
+        font-size: 15px;
+      }
+
+      .step-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+      }
+      .step-card {
+        background: #fff;
+        border: 1px solid #ececf0;
+        border-radius: 14px;
+        padding: 28px 24px 26px;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+      .step-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 36px rgba(11, 13, 18, 0.08);
+        border-color: #d6ddff;
+      }
+      .step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        background: #050505;
+        color: #fff;
+        font-weight: 900;
+        font-size: 14px;
+        margin-bottom: 18px;
+      }
+      .step-card[data-flow="sell"] .step-num { background: #1F3AE0; }
+      .step-card h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+        letter-spacing: -0.2px;
+      }
+      .step-card p {
+        margin: 0;
+        color: #3f4a59;
+        font-size: 14.5px;
+        line-height: 1.55;
+      }
+      .step-card .step-meta {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px dashed #ececf0;
+        color: #677181;
+        font-size: 13px;
+      }
+
+      .safety-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+        margin-top: 8px;
+      }
+      .safety-card {
+        background: #f8f9fb;
+        border-radius: 14px;
+        padding: 32px 26px;
+      }
+      .safety-card .safe-icon {
+        width: 56px; height: 56px;
+        border-radius: 14px;
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #1F3AE0;
+        margin-bottom: 16px;
+        box-shadow: 0 6px 14px rgba(31, 58, 224, 0.10);
+      }
+      .safety-card h3 { margin: 0 0 6px; font-size: 18px; }
+      .safety-card p { margin: 0; color: #3f4a59; font-size: 14.5px; line-height: 1.55; }
+
+      .faq-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+      .faq-item {
+        border: 1px solid #ececf0;
+        border-radius: 12px;
+        padding: 18px 22px;
+        background: #fff;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .faq-item[open] { border-color: #1F3AE0; background: #fcfcff; }
+      .faq-item summary {
+        cursor: pointer;
+        font-weight: 800;
+        font-size: 15.5px;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .faq-item summary::-webkit-details-marker { display: none; }
+      .faq-item summary::after {
+        content: "+";
+        font-weight: 800;
+        font-size: 20px;
+        color: #87909d;
+        transition: transform 0.15s ease, color 0.15s ease;
+      }
+      .faq-item[open] summary::after { content: "−"; color: #1F3AE0; }
+      .faq-item p { margin: 12px 0 0; color: #3f4a59; font-size: 14.5px; line-height: 1.6; }
+
+      .guide-cta {
+        margin-top: 56px;
+        background: #050505;
+        color: #fff;
+        border-radius: 18px;
+        padding: 44px 48px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+      }
+      .guide-cta h3 { margin: 0 0 8px; font-size: 24px; letter-spacing: -0.3px; }
+      .guide-cta p { margin: 0; color: #c9ccd3; font-size: 15px; }
+      .guide-cta-actions { display: flex; gap: 10px; flex-shrink: 0; }
+      .guide-cta-actions a {
+        display: inline-flex;
+        align-items: center;
+        height: 44px;
+        padding: 0 22px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 14.5px;
+        transition: transform 0.08s ease, background 0.15s ease;
+      }
+      .guide-cta-actions a.primary { background: #1F3AE0; color: #fff; }
+      .guide-cta-actions a.primary:hover { background: #1830C2; }
+      .guide-cta-actions a.ghost { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.18); }
+      .guide-cta-actions a.ghost:hover { background: rgba(255,255,255,0.14); }
+      .guide-cta-actions a:active { transform: scale(0.97); }
+
+      [data-flow-panel] { display: none; }
+      [data-flow-panel].is-active { display: block; }
+
+      @media (max-width: 960px) {
+        .guide-hero h1 { font-size: 32px; }
+        .step-grid { grid-template-columns: repeat(2, 1fr); }
+        .safety-grid { grid-template-columns: 1fr; }
+        .guide-cta { flex-direction: column; align-items: flex-start; padding: 32px 28px; }
+      }
+      @media (max-width: 560px) {
+        .step-grid { grid-template-columns: 1fr; }
+        .guide-switch button { min-width: 0; flex: 1; padding: 10px 14px; font-size: 14px; }
+      }
+
+    </style>
+  </head>
+  <body data-screen-label="AISquare Guide">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a class="active" href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="guide-hero">
+        <div class="kmong-wrap">
+          <span class="eyebrow">BUYER &amp; SELLER GUIDE</span>
+          <h1>처음 거래해도 <mark>안심할 수 있도록</mark><br />단계별로 알려드려요</h1>
+          <p>AISquare는 검증된 AI 노하우를 사고파는 마켓플레이스입니다. 구매부터 판매 정산까지, 알아두면 좋을 흐름을 4단계로 정리했어요.</p>
+          <div class="guide-switch" role="tablist" aria-label="가이드 전환">
+            <button type="button" class="is-active" data-flow-btn="buy" role="tab" aria-selected="true">구매 방법</button>
+            <button type="button" data-flow-btn="sell" role="tab" aria-selected="false">판매 방법</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="guide-section" data-flow-panel="buy" class="is-active">
+        <div class="kmong-wrap">
+          <h2><mark>구매</mark> 4단계</h2>
+          <p class="sub">로그인부터 구매 확정까지, 72시간 자동 확정으로 보호받는 거래 흐름이에요.</p>
+          <div class="step-grid">
+            <article class="step-card" data-flow="buy">
+              <span class="step-num">01</span>
+              <h3>회원가입 &amp; 로그인</h3>
+              <p>이메일과 닉네임으로 가입한 뒤, 마이페이지에서 본인인증(PASS)을 완료하세요.</p>
+              <div class="step-meta">예상 소요 · 1분</div>
+            </article>
+            <article class="step-card" data-flow="buy">
+              <span class="step-num">02</span>
+              <h3>노하우 탐색 &amp; 비교</h3>
+              <p>마켓에서 카테고리·평점·리뷰로 필터링하고, 판매자 프로필과 미리보기를 확인하세요.</p>
+              <div class="step-meta">팁 · 평점 4.8↑ + 리뷰 20건↑ 추천</div>
+            </article>
+            <article class="step-card" data-flow="buy">
+              <span class="step-num">03</span>
+              <h3>Square로 결제</h3>
+              <p>지갑에 Square를 충전해 결제합니다. 결제 즉시 자료를 다운로드할 수 있어요.</p>
+              <div class="step-meta">결제 수단 · Square / 포인트</div>
+            </article>
+            <article class="step-card" data-flow="buy">
+              <span class="step-num">04</span>
+              <h3>검수 후 구매 확정</h3>
+              <p>72시간 내 확정 또는 자동 확정 시 판매자에게 정산됩니다. 확정 후 리뷰 작성 시 포인트 적립.</p>
+              <div class="step-meta">보호 · 72시간 자동 확정 정책</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="guide-section" data-flow-panel="sell" style="display:none;">
+        <div class="kmong-wrap">
+          <h2><mark>판매</mark> 4단계</h2>
+          <p class="sub">상품 등록부터 정산까지, 판매자 센터에서 한 번에 관리할 수 있어요.</p>
+          <div class="step-grid">
+            <article class="step-card" data-flow="sell">
+              <span class="step-num">01</span>
+              <h3>판매자 전환</h3>
+              <p>마이페이지 &gt; 판매자 신청에서 본인인증과 정산 계좌를 등록하면 즉시 활성화됩니다.</p>
+              <div class="step-meta">예상 소요 · 3분</div>
+            </article>
+            <article class="step-card" data-flow="sell">
+              <span class="step-num">02</span>
+              <h3>노하우 상품 등록</h3>
+              <p>제목·카테고리·미리보기·가격을 입력하세요. 표지 12종 중 선택하거나 직접 업로드 가능합니다.</p>
+              <div class="step-meta">권장 가격 · 1,000~10,000 Square</div>
+            </article>
+            <article class="step-card" data-flow="sell">
+              <span class="step-num">03</span>
+              <h3>검수 &amp; 노출</h3>
+              <p>저작권·민감정보 자동 검수 후 24시간 내 승인. 카테고리·랭킹·검색에 자동 노출됩니다.</p>
+              <div class="step-meta">검수 기준 · AISquare 안전 정책</div>
+            </article>
+            <article class="step-card" data-flow="sell">
+              <span class="step-num">04</span>
+              <h3>정산 받기</h3>
+              <p>구매 확정 시 판매 금액의 92%가 지갑에 적립. 등록 계좌로 출금 신청하면 영업일 내 입금돼요.</p>
+              <div class="step-meta">수수료 · 8% (Square 거래 기준)</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="guide-section" style="padding-top:0;">
+        <div class="kmong-wrap">
+          <h2>거래를 지키는 <mark>3가지 안전장치</mark></h2>
+          <p class="sub">AISquare가 구매자와 판매자 모두를 보호하기 위해 적용하는 핵심 정책입니다.</p>
+          <div class="safety-grid">
+            <article class="safety-card">
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 9.3 8 10 4.5-.7 8-5 8-10V6l-8-4z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <h3>72시간 자동 확정</h3>
+              <p>구매 후 72시간 안에 확정하지 않으면 자동 확정됩니다. 그 사이 검수 시간이 보장돼요.</p>
+            </article>
+            <article class="safety-card">
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h3>Web3 거래 원장</h3>
+              <p>모든 거래는 변조 불가능한 원장에 기록되어 추후 분쟁 시 증빙으로 활용됩니다.</p>
+            </article>
+            <article class="safety-card">
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+              </div>
+              <h3>판매자 검수</h3>
+              <p>저작권·민감정보·복제물 여부를 자동 검수하고, 신고 누적 시 즉시 노출이 중단됩니다.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="guide-section" style="padding-top:0;">
+        <div class="kmong-wrap">
+          <h2>자주 묻는 질문</h2>
+          <p class="sub">처음 거래하시는 분들이 가장 많이 궁금해하시는 내용을 모았어요.</p>
+          <div class="faq-list">
+            <details class="faq-item">
+              <summary>Square와 포인트는 어떻게 다른가요?</summary>
+              <p>Square는 충전·결제·정산에 쓰이는 주 통화이고, 포인트는 리뷰·캐시백으로 적립되는 보조 수단입니다. 포인트는 결제 시 일부 차감 형태로 사용할 수 있어요.</p>
+            </details>
+            <details class="faq-item">
+              <summary>구매한 자료가 마음에 들지 않으면 환불되나요?</summary>
+              <p>다운로드 직후 자료에 명백한 하자(파일 손상·복제물 등)가 있을 때만 환불됩니다. 단순 변심은 환불 대상이 아니에요. 구매 전 미리보기와 리뷰를 꼼꼼히 확인해 주세요.</p>
+            </details>
+            <details class="faq-item">
+              <summary>판매 수익은 언제 출금할 수 있나요?</summary>
+              <p>구매가 확정된 시점부터 지갑에 정산 금액이 쌓이며, 마이페이지 &gt; 지갑 &gt; 출금에서 신청하면 영업일 1~2일 내 등록 계좌로 입금됩니다.</p>
+            </details>
+            <details class="faq-item">
+              <summary>한 계정으로 구매와 판매를 동시에 할 수 있나요?</summary>
+              <p>네. 별도 계정 없이 마이페이지에서 판매자 신청만 추가하시면, 한 계정에서 구매·판매·지갑을 모두 관리할 수 있어요.</p>
+            </details>
+            <details class="faq-item">
+              <summary>저작권 분쟁이 생기면 어떻게 처리되나요?</summary>
+              <p>신고가 접수되면 해당 상품 노출은 즉시 중단되고, AISquare 운영팀이 Web3 거래 원장과 등록 자료를 검토합니다. 권리자가 확인되면 정산이 보류·환수될 수 있습니다.</p>
+            </details>
+          </div>
+
+          <div class="guide-cta">
+            <div>
+              <h3>준비됐다면, 지금 바로 시작해보세요</h3>
+              <p>마켓에서 노하우를 둘러보거나, 직접 상품을 등록해 첫 판매를 시작할 수 있어요.</p>
+            </div>
+            <div class="guide-cta-actions">
+              <a class="primary" href="./market.html">마켓 둘러보기</a>
+              <a class="ghost" href="./sell.html">판매 시작하기</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+    <script>
+      // Buy/Sell flow toggle
+      (function () {
+        var btns = document.querySelectorAll('[data-flow-btn]');
+        var panels = document.querySelectorAll('[data-flow-panel]');
+        function setFlow(flow) {
+          btns.forEach(function (b) {
+            var on = b.getAttribute('data-flow-btn') === flow;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+          panels.forEach(function (p) {
+            var on = p.getAttribute('data-flow-panel') === flow;
+            p.style.display = on ? 'block' : 'none';
+          });
+        }
+        btns.forEach(function (b) {
+          b.addEventListener('click', function () { setFlow(b.getAttribute('data-flow-btn')); });
+        });
+        // Honor ?flow=sell on initial load
+        var qs = new URLSearchParams(location.search);
+        if (qs.get('flow') === 'sell') setFlow('sell');
+      })();
+    </script>
+  </body>
+</html>

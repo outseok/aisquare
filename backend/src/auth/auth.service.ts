@@ -65,6 +65,16 @@ export class AuthService {
   }
 
   async verifyPhone(userId: string, dto: VerifyPhoneDto) {
+    // Dev escape hatch — SKIP_PASS_VERIFICATION=1 makes verifyPhone a no-op
+    // that just marks the user as verified, without calling iamport.
+    if (process.env.SKIP_PASS_VERIFICATION === '1') {
+      const updated = await this.prisma.user.update({
+        where: { id: userId },
+        data: { phoneVerified: true, passId: 'dev-skip-' + Date.now() },
+      });
+      return this.sanitize(updated);
+    }
+
     const impKey = process.env.IMP_KEY;
     const impSecret = process.env.IMP_SECRET;
     if (!impKey || !impSecret) throw new BadRequestException('본인인증 서비스 설정이 필요합니다');

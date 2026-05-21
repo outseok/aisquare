@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AISquare — AI 노하우를 사고파는 마켓</title>
+    <meta name="description" content="검증된 AI 활용 노하우, 프롬프트, 자동화 시트를 거래하는 Web3 마켓플레이스 AISquare." />
+    <link rel="stylesheet" href="./styles.css?v=1779342157" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body data-screen-label="AISquare Home">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" data-toast="AISquare 홈" aria-label="AISquare 홈">
+          <img src="./assets/aisquare_animated_logo.svg" alt="AISquare" />
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a class="active" href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar">U</span>
+            <span class="name" id="hdrName">사용자</span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="answer-main">
+        <div class="answer-wrap answer-hero">
+          <div class="answer-hero-media hero-3d">
+            <div id="sq3dWrap" style="position:relative;width:100%;height:500px;background:#000308;border-radius:18px;overflow:hidden;font-family:'Helvetica Neue',Arial,sans-serif;">
+              <canvas id="cvs5" style="display:block;width:100%;height:100%;position:absolute;inset:0;z-index:0;"></canvas>
+
+              <div id="overlay5" style="position:absolute;inset:0;background:#000308;z-index:1;opacity:1;pointer-events:none;"></div>
+
+              <div style="position:absolute;top:20px;left:26px;color:rgba(255,255,255,0.95);font-size:11px;letter-spacing:0.42em;font-weight:500;z-index:3;">SQUARE</div>
+
+              <div id="topbar5" style="position:absolute;top:54px;left:26px;color:rgba(120,220,230,0.7);font-size:9px;letter-spacing:0.42em;display:flex;gap:18px;opacity:0;z-index:3;">
+                <span>● LIVE</span><span>VERIFIED EXPERTS 1,247</span><span>TRADES/S 8.2K</span>
+              </div>
+
+              <div id="load5" style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#fff;opacity:0;z-index:3;">
+                <div style="font-size:9px;letter-spacing:0.62em;color:rgba(255,255,255,0.5);margin-bottom:18px;">VERIFYING</div>
+                <div style="font-size:32px;font-weight:300;letter-spacing:0.14em;">
+                  <span id="lw5" style="font-weight:500;">SQUARE</span>
+                </div>
+                <div style="margin-top:24px;width:170px;height:1px;background:rgba(255,255,255,0.1);margin-left:auto;margin-right:auto;position:relative;">
+                  <div id="lbar5" style="position:absolute;top:0;left:0;height:1px;background:#3eecdc;width:0%;"></div>
+                </div>
+                <div id="lp5" style="margin-top:10px;font-size:9px;letter-spacing:0.4em;color:rgba(255,255,255,0.4);">0%</div>
+              </div>
+
+              <div id="tblk5" style="position:absolute;left:0;right:0;bottom:64px;text-align:center;color:#fff;opacity:0;z-index:3;pointer-events:none;">
+                <div style="font-size:9px;letter-spacing:0.55em;color:rgba(120,220,230,0.8);margin-bottom:14px;">— VERIFIED AI EXPERTS · SECURE TRADING —</div>
+                <div style="font-size:38px;font-weight:200;letter-spacing:0.22em;line-height:1.12;">
+                  <span style="font-weight:500;">TRADE</span>&nbsp;EXPERTISE
+                </div>
+                <div style="font-size:38px;font-weight:200;letter-spacing:0.22em;line-height:1.12;margin-top:2px;">
+                  ON&nbsp;<span style="font-weight:500;">SQUARE</span>
+                </div>
+              </div>
+
+              <div id="botbar5" style="position:absolute;bottom:18px;left:26px;color:rgba(255,255,255,0.4);font-size:9px;letter-spacing:0.42em;display:flex;gap:18px;opacity:0;z-index:3;">
+                <span>01 / INTRO</span><span style="color:rgba(120,220,230,0.65);">SQUARE AI</span>
+              </div>
+              <div id="scr5" style="position:absolute;bottom:18px;right:26px;color:rgba(255,255,255,0.4);font-size:9px;letter-spacing:0.5em;opacity:0;z-index:3;">EXPLORE ↓</div>
+
+              <div id="errbox5" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#ff6;font-size:11px;display:none;z-index:9;"></div>
+            </div>
+          </div>
+          <article class="answer-hero-copy">
+            <span style="color:#b3b3b3;font-weight:700;font-size:13px;letter-spacing:0.18em;">AI 노하우 마켓플레이스</span>
+            <h1 style="font-size:28px;">검증된 AI 전문가의 노하우를<br /><mark>Square</mark>로 안전하게 거래하세요</h1>
+            <p>실무에서 바로 쓰는 카피 프롬프트와 자동화 시트를 모았어요. 다운로드 후 72시간 안에 확인하고 자동 확정되는 안전 거래로 진행됩니다.</p>
+            <div class="hero-cta-row">
+              <a class="hero-cta primary" href="./market.html">마켓 둘러보기</a>
+              <a class="hero-cta ghost" href="./guide.html">이용가이드 보기</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="answer-latest">
+        <div class="answer-wrap">
+          <div class="latest-head">
+            <h2>이번 주 신규 노하우</h2>
+            <div class="latest-arrows" id="latestArrows">
+              <span data-dir="prev" role="button" tabindex="0" aria-label="이전">←</span>
+              <b data-dir="next" role="button" tabindex="0" aria-label="다음">→</b>
+            </div>
+          </div>
+          <div class="latest-grid" id="latestGrid">
+            <a class="latest-card" href="./product.html?id=p008">
+              <img src="./assets/latest-1.svg" alt="" />
+              <span><strong>ChatGPT로 회의록 정리하는<br />8단계 워크플로우</strong><time datetime="2026-05-13">2026.05.13</time></span>
+            </a>
+            <a class="latest-card" href="./product.html?id=p009">
+              <img src="./assets/latest-2.svg" alt="" />
+              <span><strong>코드 리뷰 자동화 –<br />Cursor + Claude 활용 가이드</strong><time datetime="2026-05-10">2026.05.10</time></span>
+            </a>
+            <a class="latest-card" href="./product.html?id=p005">
+              <img src="./assets/latest-3.svg" alt="" />
+              <span><strong>AI 영상 편집 –<br />Runway Gen-3 실전 노하우</strong><time datetime="2026-05-04">2026.05.04</time></span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="kmong-products">
+        <div class="kmong-wrap">
+          <div class="product-block" data-block="marketer">
+            <h2><mark>마케터</mark>가<br />많이 찾아요</h2>
+            <div class="service-grid">
+              <a class="service-tab is-active" href="#" data-service="카피라이팅 프롬프트">카피라이팅 프롬프트 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="SEO 자동화">SEO 자동화 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="콘텐츠 캘린더">콘텐츠 캘린더 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="광고 최적화">광고 최적화 <b>＋</b></a>
+            </div>
+            <div class="market-grid">
+              <article class="market-card" data-product-id="p001">
+                <img src="./assets/cover-01.svg" alt="" />
+                <h3>GPT-5 SNS 광고 카피 프롬프트 50종 + 톤앤매너 학습 시트</h3>
+                <p><span>★</span> 4.9 <em>(270)</em></p>
+                <strong>5,500 Square~</strong><small>soyeon.k</small>
+              </article>
+              <article class="market-card" data-product-id="p002">
+                <img src="./assets/cover-02.svg" alt="" />
+                <h3>주간 마케팅 리포트 자동 생성 GPT-5 프롬프트 패키지</h3>
+                <p><span>★</span> 4.8 <em>(129)</em></p>
+                <strong>3,200 Square~</strong><small>mkt.lab</small>
+              </article>
+              <article class="market-card" data-product-id="p003">
+                <img src="./assets/cover-03.svg" alt="" />
+                <h3>네이버·구글 키워드 분석 자동화 시트 + Claude 프롬프트</h3>
+                <p><span>★</span> 4.9 <em>(2,976)</em></p>
+                <strong>2,800 Square~</strong><small>seo.master</small>
+              </article>
+              <article class="market-card" data-product-id="p004">
+                <img src="./assets/cover-04.svg" alt="" />
+                <h3>블로그 SEO 자동화 워크시트 · 월 100건 검색 상위 노출</h3>
+                <p><span>★</span> 4.9 <em>(135)</em></p>
+                <strong>10,000 Square</strong><small>A플랜</small>
+              </article>
+            </div>
+          </div>
+
+          <div class="product-block" data-block="creator">
+            <h2><mark class="pink">콘텐츠 크리에이터</mark>가<br />많이 찾아요</h2>
+            <div class="service-grid">
+              <a class="service-tab is-active" href="#" data-service="영상 스크립트">영상 스크립트 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="썸네일 생성">썸네일 생성 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="자막 자동화">자막 자동화 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="SNS 큐레이션">SNS 큐레이션 <b>＋</b></a>
+            </div>
+            <div class="market-grid">
+              <article class="market-card" data-product-id="p005">
+                <img src="./assets/cover-05.svg" alt="" />
+                <h3>유튜브 후킹 스크립트 GPT 프롬프트 · 평균 시청 지속률 +18%</h3>
+                <p><span>★</span> 5.0 <em>(133)</em></p>
+                <strong>1,500 Square~</strong><small>youtuber.jin</small>
+              </article>
+              <article class="market-card" data-product-id="p006">
+                <img src="./assets/cover-06.svg" alt="" />
+                <h3>Midjourney v7 + DALL·E 3 썸네일 자동 생성 프롬프트 100선</h3>
+                <p><span>★</span> 4.9 <em>(3,255)</em></p>
+                <strong>10,000 Square~</strong><small>thumbnail.master</small>
+              </article>
+              <article class="market-card" data-product-id="p007">
+                <img src="./assets/cover-07.svg" alt="" />
+                <h3>릴스·쇼츠 자막 자동 생성 + 감정 분석 GPT 시트</h3>
+                <p><span>★</span> 4.9 <em>(688)</em></p>
+                <strong>3,400 Square~</strong><small>shorts.kim</small>
+              </article>
+              <article class="market-card" data-product-id="p008">
+                <img src="./assets/cover-08.svg" alt="" />
+                <h3>인스타·X 일주일치 콘텐츠 큐레이션 GPT 자동화</h3>
+                <p><span>★</span> 4.9 <em>(96)</em></p>
+                <strong>500 Square~</strong><small>sns.lab</small>
+              </article>
+            </div>
+          </div>
+
+          <div class="product-block" data-block="dev">
+            <h2><mark class="blue">개발자</mark>가<br />많이 찾아요</h2>
+            <div class="service-grid">
+              <a class="service-tab is-active" href="#" data-service="코드 리뷰 자동화">코드 리뷰 자동화 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="테스트 케이스 생성">테스트 케이스 생성 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="문서화 자동화">문서화 자동화 <b>＋</b></a>
+              <a class="service-tab" href="#" data-service="디버깅 어시스턴트">디버깅 어시스턴트 <b>＋</b></a>
+            </div>
+            <div class="market-grid">
+              <article class="market-card" data-product-id="p009">
+                <img src="./assets/cover-09.svg" alt="" />
+                <h3>Cursor + Claude 코드 리뷰 자동화 · 컨벤션 100% 일치</h3>
+                <p><span>★</span> 4.9 <em>(553)</em></p>
+                <strong>2,500 Square~</strong><small>devmate</small>
+              </article>
+              <article class="market-card" data-product-id="p010">
+                <img src="./assets/cover-10.svg" alt="" />
+                <h3>NestJS · FastAPI API 문서 자동 생성 GPT 프롬프트 세트</h3>
+                <p><span>★</span> 5.0 <em>(457)</em></p>
+                <strong>39,900 Square</strong><small>docgen</small>
+              </article>
+              <article class="market-card" data-product-id="p011">
+                <img src="./assets/cover-11.svg" alt="" />
+                <h3>Jest · Vitest 단위 테스트 자동 생성 Claude 프롬프트</h3>
+                <p><span>★</span> 5.0 <em>(1)</em></p>
+                <strong>50,000 Square</strong><small>ChairTeam</small>
+              </article>
+              <article class="market-card" data-product-id="p012">
+                <img src="./assets/cover-12.svg" alt="" />
+                <h3>에러 로그 분석 → 픽스 제안 GPT 프롬프트 · 디버깅 단축</h3>
+                <p><span>★</span> 4.9 <em>(40)</em></p>
+                <strong>1,600 Square~</strong><small>debug.helper</small>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="kmong-safe">
+        <div class="kmong-wrap">
+          <h2>쉽고, 편하고, 안전한 AISquare</h2>
+          <div class="safe-grid">
+            <article>
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </div>
+              <h3>키워드로 찾고</h3>
+              <p>필요한 AI 노하우와 프롬프트를<br />검색·필터로 빠르게 찾을 수 있어요</p>
+            </article>
+            <article>
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <h3>미리보기 확인</h3>
+              <p>구매 전 샘플과 판매자 평점을<br />꼼꼼히 확인하고 결제할 수 있어요</p>
+            </article>
+            <article>
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <h3>Square로 결제</h3>
+              <p>72시간 자동 확정 정책으로<br />다운로드 후 검수까지 안전하게</p>
+            </article>
+            <article>
+              <div class="safe-icon">
+                <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              </div>
+              <h3>즉시 다운로드</h3>
+              <p>구매 즉시 PDF·JPG·MP4·ZIP을<br />받아 바로 실무에 적용해보세요</p>
+            </article>
+          </div>
+          <a class="more-button" href="./guide.html">자세히 보기</a>
+        </div>
+      </section>
+
+      <section class="kmong-use">
+        <div class="kmong-wrap">
+          <h2>AISquare를 더 잘 활용하는 방법</h2>
+          <div class="use-grid">
+            <article data-href="./market.html"><img src="./assets/aisq-use-1.svg" alt="" /><h3>AI 검색 어시스턴트</h3><p>원하는 작업을 한 문장으로 입력하면 적합한 프롬프트·시트를 추천해 드려요.</p></article>
+            <article data-href="./about.html?tab=blog"><img src="./assets/aisq-use-2.svg" alt="" /><h3>AISquare 로그</h3><p>전문가들의 실전 인터뷰와 구매자 후기를 통해 성공 노하우를 배워보세요.</p></article>
+            <article data-href="./about.html?tab=portfolio"><img src="./assets/aisq-use-3.svg" alt="" /><h3>포트폴리오</h3><p>전문가의 작업 사례와 실제 결과물을 한눈에 비교해 의사결정을 돕습니다.</p></article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-grid">
+          <section class="footer-help">
+            <strong>AISquare는 AI 노하우 중개 플랫폼입니다.<br />작업 의뢰는 판매자에게 직접 문의해 주세요.</strong>
+            <p class="policy"><a href="./terms.html">이용약관</a><a href="./terms.html?tab=privacy">개인정보처리방침</a></p>
+          </section>
+          <nav>
+            <h3>구매자 안내</h3>
+            <a href="./market.html">마켓</a>
+            <a href="./ranking.html">랭킹</a>
+            <a href="./guide.html">이용가이드</a>
+          </nav>
+          <nav>
+            <h3>판매자 안내</h3>
+            <a href="./sell.html">판매자 등록</a>
+            <a href="./mypage.html?tab=account">PASS 본인인증</a>
+            <a href="./mypage.html?tab=wallet">지갑 관리</a>
+          </nav>
+          <nav>
+            <h3>고객 지원</h3>
+            <a href="./support.html?tab=faq">자주 묻는 질문</a>
+            <a href="./support.html?tab=notice">공지사항</a>
+            <a href="./support.html?tab=report">신고 안내</a>
+          </nav>
+        </div>
+        <div class="footer-bottom">
+          <img class="kmong-logo" src="./assets/aisquare_logo_static.svg" alt="AISquare" />
+        </div>
+        <p class="company muted">AISquare는 통신판매중개자이며 통신판매의 당사자가 아닙니다. 상품, 상품정보, 거래에 관한 의무와 책임은 판매회원에게 있습니다.</p>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <!-- Search overlay -->
+    <div id="searchOverlay" class="search-overlay" role="dialog" aria-modal="true" aria-label="검색">
+      <div class="search-panel">
+        <div class="search-field">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="프롬프트, 가이드, 모델명으로 검색" autocomplete="off" />
+          <kbd data-search-close>Esc</kbd>
+        </div>
+        <div class="search-suggestions">
+          <strong>추천 키워드</strong>
+          <button type="button" data-search-suggest>GPT-5 마케팅 카피</button>
+          <button type="button" data-search-suggest>Claude 코드 리뷰</button>
+          <button type="button" data-search-suggest>Midjourney v7 썸네일</button>
+          <button type="button" data-search-suggest>회의록 자동 정리</button>
+          <button type="button" data-search-suggest>SEO 자동화 시트</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="./api.js?v=1779342157"></script>
+    <script src="./app.js?v=1779342157"></script>
+
+    <!-- Three.js for hero 3D scene -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="./hero3d.js?v=1779340995"></script>
+  </body>
+</html>
