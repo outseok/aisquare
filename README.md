@@ -114,8 +114,14 @@ cd ../backend
 npm install
 npx prisma generate
 npx prisma db push    # RDS에 스키마 동기화 (처음 한 번만)
+npm run seed          # 시드 데이터 + 기본 관리자 계정 생성
 npx nest start
 ```
+
+> **🛡 기본 관리자 계정** (즉시 admin.html 사용 가능)
+> - username: `admin`
+> - password: `admin123`
+> - **운영 전 반드시 비밀번호 변경**. 또는 `.env`의 `ADMIN_USERNAMES`를 자기 username으로 바꿔 다시 가입.
 
 `[FabricService] Fabric Gateway 연결 성공` 로그가 뜨면 BE가 진짜 peer에 연결된 것.
 

@@ -41,6 +41,27 @@ const products = [
 async function main() {
   const passwordHash = await bcrypt.hash('seedpass', 10);
 
+  // ── Default admin user (관리자 콘솔 즉시 사용 가능) ─────────────────────
+  // username: admin / password: admin123
+  // ADMIN_USERNAMES env에 'admin' 포함되어 있으면 일반 회원가입 시에도 자동 부여되지만,
+  // 클론 직후 즉시 관리자 페이지를 쓸 수 있도록 여기서도 명시적으로 생성.
+  const adminPasswordHash = await bcrypt.hash('admin123', 10);
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: { isAdmin: true },
+    create: {
+      username: 'admin',
+      passwordHash: adminPasswordHash,
+      name: 'AISquare 관리자',
+      nickname: '관리자',
+      email: 'admin@aisquare.com',
+      phone: '01000000000',
+      phoneVerified: false,
+      isAdmin: true,
+    } as any,
+  });
+  console.log('Default admin user 생성 — username: admin / password: admin123 (즉시 변경 권장)');
+
   // Seller users
   const sellerById: Record<string, string> = {};
   for (const s of sellers) {
