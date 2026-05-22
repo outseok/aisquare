@@ -183,7 +183,7 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash('admin123', 10);
   await prisma.user.upsert({
     where: { username: 'admin' },
-    update: { isAdmin: true },
+    update: { isAdmin: true, passwordHash: adminPasswordHash, phoneVerified: true } as any,
     create: {
       username: 'admin',
       passwordHash: adminPasswordHash,
@@ -200,7 +200,7 @@ async function main() {
   // ── Naver Pay admin user (네이버 관리자 콘솔용) ─────────────────────────
   await prisma.user.upsert({
     where: { username: 'naver-admin' },
-    update: { isNaverAdmin: true } as any,
+    update: { isNaverAdmin: true, passwordHash: adminPasswordHash, phoneVerified: true } as any,
     create: {
       username: 'naver-admin',
       passwordHash: adminPasswordHash,
@@ -218,7 +218,7 @@ async function main() {
   const testUserHash = await bcrypt.hash('22222222', 10);
   await prisma.user.upsert({
     where: { username: '2222' },
-    update: {},
+    update: { passwordHash: testUserHash, phoneVerified: true } as any,
     create: {
       username: '2222',
       passwordHash: testUserHash,
