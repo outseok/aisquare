@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 60 820 240" preserveAspectRatio="xMidYMid meet" aria-label="AISquare logo">
+<defs>
+<linearGradient id="metalStroke" x1="130" y1="100" x2="270" y2="260" gradientUnits="userSpaceOnUse">
+<stop offset="0%" stop-color="#7a7973"/>
+<stop offset="50%" stop-color="#4a4a47"/>
+<stop offset="100%" stop-color="#1a1a18"/>
+</linearGradient>
+<style><![CDATA[
+@import url('https://fonts.googleapis.com/css2?family=Tektur:wght@500;600;700&family=Aldrich&display=swap');
+.outer-edge{fill:none;stroke:url(#metalStroke);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.inner-hex{fill:none;stroke:#1a1a18;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.inner-spoke{fill:none;stroke:#888780;stroke-width:1.2;stroke-linecap:round}
+.link{fill:none;stroke:#5f5e5a;stroke-width:1.5;stroke-linecap:round}
+.face{transform-origin:200px 180px}
+.node-out{fill:#2c2c2a}
+.node-in{fill:#5f5e5a}
+.wordmark{font-family:'Tektur','Aldrich',system-ui,sans-serif;font-weight:500;font-size:80px;fill:#2c2c2a;letter-spacing:-1px}
+]]></style>
+</defs>
+<g class="symbol">
+<polygon class="face" points="169.69,162.5 200,145 230.31,162.5 200,180" fill="#c8c6bd"/>
+<polygon class="face" points="230.31,162.5 230.31,197.5 200,215 200,180" fill="#3f3f3d"/>
+<polygon class="face" points="169.69,162.5 169.69,197.5 200,215 200,180" fill="#7a7973"/>
+<line class="outer-edge" x1="200" y1="100" x2="269.28" y2="140"/>
+<line class="outer-edge" x1="269.28" y1="140" x2="269.28" y2="220"/>
+<line class="outer-edge" x1="269.28" y1="220" x2="200" y2="260"/>
+<line class="outer-edge" x1="200" y1="260" x2="130.72" y2="220"/>
+<line class="outer-edge" x1="130.72" y1="220" x2="130.72" y2="140"/>
+<line class="outer-edge" x1="130.72" y1="140" x2="200" y2="100"/>
+<line class="link" x1="200" y1="100" x2="200" y2="145"/>
+<line class="link" x1="269.28" y1="140" x2="230.31" y2="162.5"/>
+<line class="link" x1="269.28" y1="220" x2="230.31" y2="197.5"/>
+<line class="link" x1="200" y1="260" x2="200" y2="215"/>
+<line class="link" x1="130.72" y1="220" x2="169.69" y2="197.5"/>
+<line class="link" x1="130.72" y1="140" x2="169.69" y2="162.5"/>
+<line class="inner-hex" x1="200" y1="145" x2="230.31" y2="162.5"/>
+<line class="inner-hex" x1="230.31" y1="162.5" x2="230.31" y2="197.5"/>
+<line class="inner-hex" x1="230.31" y1="197.5" x2="200" y2="215"/>
+<line class="inner-hex" x1="200" y1="215" x2="169.69" y2="197.5"/>
+<line class="inner-hex" x1="169.69" y1="197.5" x2="169.69" y2="162.5"/>
+<line class="inner-hex" x1="169.69" y1="162.5" x2="200" y2="145"/>
+<line class="inner-spoke" x1="200" y1="180" x2="200" y2="145"/>
+<line class="inner-spoke" x1="200" y1="180" x2="230.31" y2="197.5"/>
+<line class="inner-spoke" x1="200" y1="180" x2="169.69" y2="197.5"/>
+<circle class="node-out" cx="200" cy="100" r="5"/>
+<circle class="node-out" cx="269.28" cy="140" r="5"/>
+<circle class="node-out" cx="269.28" cy="220" r="5"/>
+<circle class="node-out" cx="200" cy="260" r="5"/>
+<circle class="node-out" cx="130.72" cy="220" r="5"/>
+<circle class="node-out" cx="130.72" cy="140" r="5"/>
+<circle class="node-in" cx="200" cy="145" r="2.8"/>
+<circle class="node-in" cx="230.31" cy="162.5" r="2.8"/>
+<circle class="node-in" cx="230.31" cy="197.5" r="2.8"/>
+<circle class="node-in" cx="200" cy="215" r="2.8"/>
+<circle class="node-in" cx="169.69" cy="197.5" r="2.8"/>
+<circle class="node-in" cx="169.69" cy="162.5" r="2.8"/>
+</g>
+<text class="wordmark" x="325" y="212">AISquare</text>
+</svg>

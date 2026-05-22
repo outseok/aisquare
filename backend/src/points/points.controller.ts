@@ -46,4 +46,39 @@ export class PointsController {
   getTrustToken(@Request() req) {
     return this.pointsService.getUserTrustToken(req.user.id);
   }
+
+  // ── PAID / ACTIVITY 분리 잔액 ───────────────────────────
+  @Get('balance/paid')
+  @ApiOperation({ summary: '결제 포인트 (PAID) 잔액 — 네이버 전환 가능' })
+  getPaidBalance(@Request() req) {
+    return this.pointsService.getPaidBalance(req.user.id);
+  }
+
+  @Get('balance/activity')
+  @ApiOperation({ summary: '활동 포인트 (ACTIVITY) 잔액 — 전환 불가, 사이트 내 사용만' })
+  getActivityBalance(@Request() req) {
+    return this.pointsService.getActivityBalance(req.user.id);
+  }
+
+  // ── 네이버페이 전환 ─────────────────────────────────────
+  @Post('exchange-naver')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: 'PAID 포인트를 네이버페이 포인트로 전환 (PASS 필요)' })
+  exchangeToNaver(@Request() req, @Body() body: { amount: number }) {
+    return this.pointsService.exchangeToNaver(req.user.id, body.amount);
+  }
+
+  @Get('exchange-naver')
+  @ApiOperation({ summary: '내 네이버 전환 내역' })
+  myExchanges(@Request() req) {
+    return this.pointsService.getMyExchanges(req.user.id);
+  }
+
+  // 네이버페이 → AISquare 입금 요청 (사용자가 신청, 관리자 승인 필요)
+  @Post('exchange-naver/from-naver')
+  @UseGuards(PassVerifiedGuard)
+  @ApiOperation({ summary: '네이버페이 포인트를 AISquare로 가져오기 요청 (관리자 승인 후 PAID 적립)' })
+  requestFromNaver(@Request() req, @Body() body: { amount: number }) {
+    return this.pointsService.requestFromNaver(req.user.id, body.amount);
+  }
 }

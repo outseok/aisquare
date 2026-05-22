@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>관리자 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .admin-section { padding: 40px 0 96px; }
+      .admin-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+      .admin-head h1 { margin: 0; font-size: 28px; letter-spacing: -0.4px; }
+      .admin-head .sub { color: #677181; font-size: 14px; margin: 0; }
+      .admin-head .role { padding: 6px 12px; background: #050505; color: #fff; border-radius: 999px; font-size: 12px; font-weight: 900; letter-spacing: 0.05em; }
+
+      .admin-tabs { display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: #efeff1; margin-bottom: 28px; width: fit-content; }
+      .admin-tabs button {
+        padding: 10px 22px; border: 0; background: transparent; border-radius: 999px;
+        font-weight: 800; font-size: 14px; color: #1f2a38; cursor: pointer; font-family: inherit;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .admin-tabs button:hover:not(.is-active) { background: rgba(0, 0, 0, 0.04); }
+      .admin-tabs button.is-active { background: #050505; color: #fff; }
+
+      .admin-panel { display: none; }
+      .admin-panel.is-active { display: block; }
+
+      /* Dashboard */
+      .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+      .stat-card { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 22px 24px; }
+      .stat-card .lbl { color: #87909d; font-size: 12.5px; font-weight: 800; letter-spacing: 0.04em; }
+      .stat-card .val { margin-top: 8px; font-size: 26px; font-weight: 900; color: #1f2a38; letter-spacing: -0.3px; }
+      .stat-card .val em { font-style: normal; font-size: 13px; color: #677181; font-weight: 700; margin-left: 3px; }
+      .stat-card .sub { color: #87909d; font-size: 12px; margin-top: 4px; }
+
+      /* Tables */
+      .ad-table-wrap { background: #fff; border: 1px solid #ececf0; border-radius: 14px; overflow: hidden; }
+      .ad-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+      .ad-table th { text-align: left; background: #f8f9fb; padding: 12px 16px; color: #677181; font-weight: 800; font-size: 12.5px; letter-spacing: 0.04em; border-bottom: 1px solid #ececf0; }
+      .ad-table td { padding: 14px 16px; border-bottom: 1px solid #f1f3f6; color: #1f2a38; }
+      .ad-table tr:last-child td { border-bottom: 0; }
+      .ad-table tr:hover td { background: #fafbfc; }
+      .ad-table .status { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+      .ad-table .status.pending  { background: #fef6e0; color: #b87705; }
+      .ad-table .status.review   { background: #eef1ff; color: #1F3AE0; }
+      .ad-table .status.approved { background: #def8ea; color: #1f8a5b; }
+      .ad-table .status.refunded { background: #ffe3d6; color: #c8331f; }
+      .ad-table .status.visible  { background: #def8ea; color: #1f8a5b; }
+      .ad-table .status.hidden   { background: #eef1f5; color: #677181; }
+      .ad-table .ad-btn {
+        padding: 6px 12px; border: 1px solid #d4dae4; background: #fff; border-radius: 6px;
+        font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; color: #1f2a38; margin-right: 4px;
+      }
+      .ad-table .ad-btn.danger { color: #c8331f; border-color: #f3c8c1; }
+      .ad-table .ad-btn.approve { color: #1f8a5b; border-color: #b8e6cb; }
+      .ad-table .ad-btn:hover { background: #f4f6fa; }
+      .ad-table .truncate { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .ad-empty { padding: 60px 0; text-align: center; color: #87909d; font-size: 14px; }
+
+      .ad-loginGate { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 60px 40px; text-align: center; }
+      .ad-loginGate h2 { margin: 0 0 8px; font-size: 22px; color: #1f2a38; }
+      .ad-loginGate p { margin: 0 0 20px; color: #677181; font-size: 14px; }
+      .ad-loginGate a.btn { display: inline-block; padding: 12px 22px; background: #050505; color: #fff; border-radius: 8px; font-weight: 800; font-size: 14px; }
+
+      /* Report detail modal */
+      .rp-modal-bg {
+        position: fixed; inset: 0; z-index: 9999; background: rgba(11,13,18,0.6);
+        display: flex; align-items: center; justify-content: center; padding: 24px;
+      }
+      .rp-modal {
+        width: 100%; max-width: 720px; max-height: 92vh; overflow: auto;
+        background: #fff; border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+      }
+      .rp-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid #ececf0; }
+      .rp-modal-head h3 { margin: 0; font-size: 18px; color: #c8331f; }
+      .rp-modal-head .x { width: 32px; height: 32px; border: 0; background: transparent; font-size: 22px; color: #87909d; cursor: pointer; border-radius: 8px; }
+      .rp-modal-head .x:hover { background: #f4f6fa; }
+      .rp-modal-body { padding: 22px 26px 26px; }
+      .rp-modal-body .field { margin-bottom: 16px; }
+      .rp-modal-body .field .k { font-size: 12px; color: #87909d; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 4px; }
+      .rp-modal-body .field .v { font-size: 14px; color: #1f2a38; }
+      .rp-modal-body .reason-box {
+        padding: 14px 16px; background: #fafbfc; border: 1px solid #ececf0; border-radius: 10px;
+        font-size: 14px; color: #1f2a38; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+      }
+      .rp-modal-body .ig-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .rp-modal-body .ig-tile {
+        aspect-ratio: 1/1; background: #f4f6fa; border-radius: 10px; overflow: hidden; cursor: zoom-in;
+        border: 1px solid #ececf0;
+      }
+      .rp-modal-body .ig-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .rp-modal-body .ig-empty { padding: 24px; text-align: center; color: #87909d; font-size: 13px; background: #fafbfc; border-radius: 10px; }
+      .rp-modal .acts { display: flex; gap: 10px; padding: 16px 26px; border-top: 1px solid #ececf0; justify-content: flex-end; }
+      .rp-modal .acts button { padding: 10px 18px; border-radius: 8px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; border: 1px solid #d4dae4; background: #fff; }
+      .rp-modal .acts .close-btn { color: #677181; }
+      .rp-modal .acts .approve-btn { color: #1f8a5b; border-color: #b8e6cb; }
+      .rp-modal .acts .refund-btn { color: #fff; background: #c8331f; border-color: #c8331f; }
+      .rp-modal .acts button:hover { filter: brightness(0.95); }
+      .rp-modal .acts button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .img-lightbox {
+        position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.92);
+        display: flex; align-items: center; justify-content: center; cursor: zoom-out;
+      }
+      .img-lightbox img { max-width: 95vw; max-height: 95vh; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+
+      .img-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 8px; background: #eef1ff; color: #1F3AE0;
+        border-radius: 999px; font-size: 11px; font-weight: 800;
+      }
+
+      @media (max-width: 960px) {
+        .stat-grid { grid-template-columns: repeat(2, 1fr); }
+        .ad-table { font-size: 12.5px; }
+        .ad-table th, .ad-table td { padding: 10px 12px; }
+        .rp-modal-body .ig-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Admin">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="admin-section">
+        <div class="kmong-wrap">
+          <div id="adminRoot">
+            <div class="ad-empty">권한 확인 중...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
+    <script>
+      (async function() {
+        var api = window.AISquareAPI;
+        var root = document.getElementById('adminRoot');
+        var t = function(m){ (window.showToast || alert)(m); };
+        var fmt = (v) => Number(v || 0).toLocaleString('ko-KR');
+        var fmtDate = (d) => d ? new Date(d).toLocaleString('ko-KR', { year:'2-digit', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-';
+
+        // Gate: must be logged in + isAdmin
+        if (!api.isLoggedIn() || !api.getJwt()) {
+          root.innerHTML = '<div class="ad-loginGate"><h2>관리자 로그인이 필요합니다</h2><p>관리자 권한으로 로그인된 계정만 접근할 수 있습니다.</p><a class="btn" href="./login.html?redirect=admin">로그인하기</a></div>';
+          return;
+        }
+
+        let me;
+        try { me = await api.user.getMe(); }
+        catch (e) {
+          root.innerHTML = '<div class="ad-loginGate"><h2>세션 만료</h2><p>다시 로그인해 주세요.</p><a class="btn" href="./login.html?redirect=admin">로그인하기</a></div>';
+          return;
+        }
+        if (!me || !me.isAdmin) {
+          root.innerHTML = '<div class="ad-loginGate"><h2>접근 권한 없음</h2><p>이 페이지는 AISquare 관리자만 접근할 수 있습니다.<br>관리자 계정으로 로그인해 주세요.</p><a class="btn" href="./login.html?redirect=admin">관리자로 로그인</a></div>';
+          return;
+        }
+
+        // Build tabs
+        root.innerHTML = `
+          <div class="admin-head">
+            <div>
+              <h1>관리자 콘솔</h1>
+              <p class="sub">${me.nickname || me.username} (@${me.username}) · 신고 처리 · 상품 노출 · 정산 · 액션 로그</p>
+            </div>
+            <span class="role">⚡ ADMIN</span>
+          </div>
+          <div class="admin-tabs" id="adTabs">
+            <button data-tab="dashboard" class="is-active">대시보드</button>
+            <button data-tab="users">사용자</button>
+            <button data-tab="reports">신고 처리</button>
+            <button data-tab="products">상품 관리</button>
+            <button data-tab="naver">NaverPay → AISquare 입금</button>
+            <button data-tab="logs">액션 로그</button>
+          </div>
+          <div class="admin-panel is-active" data-panel="dashboard"><div class="ad-empty">불러오는 중...</div></div>
+          <div class="admin-panel" data-panel="users"><div class="ad-empty">사용자 탭에서 이동하세요.</div></div>
+          <div class="admin-panel" data-panel="reports"><div class="ad-empty">신고 탭에서 이동하세요.</div></div>
+          <div class="admin-panel" data-panel="products"><div class="ad-empty">상품 관리 탭에서 이동하세요.</div></div>
+          <div class="admin-panel" data-panel="naver"><div class="ad-empty">NaverPay 탭에서 이동하세요.</div></div>
+          <div class="admin-panel" data-panel="logs"><div class="ad-empty">액션 로그 탭에서 이동하세요.</div></div>
+        `;
+
+        const tabs = root.querySelectorAll('#adTabs button');
+        const panels = root.querySelectorAll('.admin-panel');
+        function go(name) {
+          tabs.forEach(b => b.classList.toggle('is-active', b.dataset.tab === name));
+          panels.forEach(p => p.classList.toggle('is-active', p.dataset.panel === name));
+          if (name === 'dashboard') loadDashboard();
+          if (name === 'users')     loadUsers();
+          if (name === 'reports')   loadReports();
+          if (name === 'products')  loadProducts();
+          if (name === 'naver')     loadNaverExchanges();
+          if (name === 'logs')      loadLogs();
+        }
+        tabs.forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
+        go('dashboard');
+
+        // ===== Dashboard =====
+        async function loadDashboard() {
+          const panel = root.querySelector('[data-panel="dashboard"]');
+          panel.innerHTML = '<div class="ad-empty">불러오는 중...</div>';
+          try {
+            const s = await api.admin.settlementStats();
+            // BE shape: { totalOrders, pending:{count,totalKrw}, hold, confirmed, refunded }
+            const num = (b) => (b && (b.count ?? b._count ?? 0)) || 0;
+            const krw = (b) => (b && (b.totalKrw ?? b._sum?.paymentAmount ?? 0)) || 0;
+            panel.innerHTML = `
+              <div class="stat-grid">
+                <div class="stat-card"><div class="lbl">총 주문</div><div class="val">${fmt(s.totalOrders)}<em>건</em></div></div>
+                <div class="stat-card"><div class="lbl">확정 대기</div><div class="val">${fmt(num(s.pending))}<em>건</em></div></div>
+                <div class="stat-card"><div class="lbl">구매 확정</div><div class="val">${fmt(num(s.confirmed))}<em>건</em></div></div>
+                <div class="stat-card"><div class="lbl">환불</div><div class="val">${fmt(num(s.refunded))}<em>건</em></div></div>
+              </div>
+              <div class="stat-grid">
+                <div class="stat-card"><div class="lbl">대기 정산액</div><div class="val">${fmt(krw(s.pending))}<em>원</em></div></div>
+                <div class="stat-card"><div class="lbl">확정 GMV</div><div class="val">${fmt(krw(s.confirmed))}<em>원</em></div></div>
+                <div class="stat-card"><div class="lbl">에스크로 보류</div><div class="val">${fmt(num(s.hold))}<em>건</em></div></div>
+                <div class="stat-card"><div class="lbl">환불액</div><div class="val">${fmt(krw(s.refunded))}<em>원</em></div></div>
+              </div>
+              <p class="sub" style="color:#87909d;font-size:12.5px;margin-top:16px;">정산 정책: 판매자 정산 95% + 양쪽 2% Square 캐시백 + 플랫폼 6%. 구매자는 표시 가격 위에 5% 추가 결제(가격×1.05).</p>
+            `;
+          } catch (e) {
+            panel.innerHTML = '<div class="ad-empty">대시보드 로드 실패: ' + (e.message||'') + '</div>';
+          }
+        }
+
+        // ===== Reports =====
+        async function loadReports() {
+          const panel = root.querySelector('[data-panel="reports"]');
+          panel.innerHTML = '<div class="ad-empty">신고 목록 불러오는 중...</div>';
+          try {
+            const list = await api.admin.getReports();
+            if (!list || list.length === 0) {
+              panel.innerHTML = '<div class="ad-empty">신고된 건이 없습니다.</div>';
+              return;
+            }
+            // 신고 데이터 캐시 (모달에서 사용)
+            const byId = {};
+            list.forEach(r => { byId[r.id] = r; });
+            const rows = list.map(r => {
+              const cls = r.status === 'PENDING' ? 'pending' : r.status === 'IN_REVIEW' ? 'review' : r.status === 'APPROVED' ? 'approved' : r.status === 'REFUNDED' ? 'refunded' : 'pending';
+              const reporter = r.reporter ? (r.reporter.name || r.reporter.username) : '-';
+              const productTitle = r.order && r.order.product ? r.order.product.title : '-';
+              const imgCount = (r.imageUrls && r.imageUrls.length) || (r.imageKeys && r.imageKeys.length) || 0;
+              const imgBadge = imgCount > 0
+                ? `<span class="img-badge" title="증빙 이미지 ${imgCount}장"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21 15 16 10 5 21"/></svg>${imgCount}</span>`
+                : '';
+              return `<tr data-rid="${r.id}" style="cursor:pointer">
+                <td><code style="font-size:11.5px;color:#87909d">${r.id.slice(0,8)}</code></td>
+                <td class="truncate">${escapeHtml(productTitle)}</td>
+                <td>${escapeHtml(reporter)}</td>
+                <td class="truncate" title="${escapeHtml(r.reason||'')}">${escapeHtml(r.reason||'')} ${imgBadge}</td>
+                <td>${fmtDate(r.createdAt)}</td>
+                <td><span class="status ${cls}">${r.status}</span></td>
+                <td>
+                  <button class="ad-btn" data-act="view" data-id="${r.id}">보기</button>
+                  ${r.status === 'PENDING' || r.status === 'IN_REVIEW'
+                    ? ''
+                    : '<span style="color:#aab3c0;font-size:12px;margin-left:6px;">처리 완료</span>'}
+                </td>
+              </tr>`;
+            }).join('');
+            panel.innerHTML = `
+              <div class="ad-table-wrap">
+                <table class="ad-table">
+                  <thead><tr><th>ID</th><th>상품</th><th>신고자</th><th>사유</th><th>일시</th><th>상태</th><th>처리</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>`;
+
+            // 행 클릭 → 모달
+            panel.querySelectorAll('tr[data-rid]').forEach(tr => {
+              tr.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return; // 버튼 클릭은 따로
+                const r = byId[tr.dataset.rid];
+                if (r) openReportDetailModal(r);
+              });
+            });
+
+            panel.querySelectorAll('[data-act]').forEach(btn => {
+              btn.addEventListener('click', async (ev) => {
+                ev.stopPropagation();
+                const id = btn.dataset.id;
+                const act = btn.dataset.act;
+                if (act === 'view') { const r = byId[id]; if (r) openReportDetailModal(r); return; }
+                const action = act === 'refund' ? 'REFUNDED' : 'APPROVED';
+                const actionLabel = action === 'REFUNDED' ? '환불 처리' : '환불 거절';
+                if (!confirm(`정말 ${actionLabel} 하시겠습니까?`)) return;
+                btn.disabled = true;
+                try {
+                  await api.admin.processReport(id, action);
+                  t(`신고 ${actionLabel} 완료`);
+                  loadReports();
+                } catch (e) {
+                  t(e.message || '처리 실패');
+                  btn.disabled = false;
+                }
+              });
+            });
+          } catch (e) {
+            panel.innerHTML = '<div class="ad-empty">신고 목록 로드 실패: ' + (e.message||'') + '</div>';
+          }
+        }
+
+        // ===== Products =====
+        async function loadProducts() {
+          const panel = root.querySelector('[data-panel="products"]');
+          panel.innerHTML = '<div class="ad-empty">상품 목록 불러오는 중...</div>';
+          try {
+            const res = await api.admin.getAllProducts({ limit: 50 });
+            const items = res.items || res || [];
+            if (!items.length) { panel.innerHTML = '<div class="ad-empty">상품이 없습니다.</div>'; return; }
+            const rows = items.map(p => {
+              const status = p.isVisible ? 'visible' : 'hidden';
+              const label = p.isVisible ? '노출 중' : '숨김';
+              return `<tr>
+                <td><code style="font-size:11.5px;color:#87909d">${p.id.slice(0,8)}</code></td>
+                <td class="truncate">${escapeHtml(p.title)}</td>
+                <td>${escapeHtml(p.seller && (p.seller.name||p.seller.username) || '-')}</td>
+                <td>₩${fmt(p.price)}</td>
+                <td>${p.status}</td>
+                <td><span class="status ${status}">${label}</span></td>
+                <td>
+                  <button class="ad-btn ${p.isVisible ? 'danger' : 'approve'}" data-act="toggle" data-id="${p.id}" data-curvis="${p.isVisible}">
+                    ${p.isVisible ? '숨기기' : '복구'}
+                  </button>
+                  <a class="ad-btn" href="./product.html?id=${p.id}" target="_blank">상세</a>
+                </td>
+              </tr>`;
+            }).join('');
+            panel.innerHTML = `
+              <div class="ad-table-wrap">
+                <table class="ad-table">
+                  <thead><tr><th>ID</th><th>제목</th><th>판매자</th><th>가격</th><th>상태</th><th>노출</th><th>관리</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>`;
+            panel.querySelectorAll('[data-act="toggle"]').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const cur = btn.dataset.curvis === 'true';
+                btn.disabled = true;
+                try {
+                  await api.admin.toggleVisibility(id, !cur);
+                  t(cur ? '상품을 숨겼습니다.' : '상품을 복구했습니다.');
+                  loadProducts();
+                } catch (e) {
+                  t(e.message || '처리 실패');
+                  btn.disabled = false;
+                }
+              });
+            });
+          } catch (e) {
+            panel.innerHTML = '<div class="ad-empty">상품 목록 로드 실패: ' + (e.message||'') + '</div>';
+          }
+        }
+
+        // ===== Users =====
+        async function loadUsers() {
+          const panel = root.querySelector('[data-panel="users"]');
+          panel.innerHTML = '<div class="ad-empty">사용자 목록 불러오는 중...</div>';
+          try {
+            const res = await api.admin.getUsers({ limit: 100 });
+            const items = res.items || [];
+            if (!items.length) { panel.innerHTML = '<div class="ad-empty">사용자가 없습니다.</div>'; return; }
+            const rows = items.map(u => {
+              const statusCls = u.status === 'ACTIVE' ? 'visible' : u.status === 'SUSPENDED' ? 'pending' : 'refunded';
+              return `<tr>
+                <td><code style="font-size:11.5px;color:#87909d">${u.id.slice(0,8)}</code></td>
+                <td><b>${escapeHtml(u.nickname || u.name || '')}</b> <span style="color:#87909d;font-size:11.5px;">@${escapeHtml(u.username)}</span>${u.isAdmin ? ' <span class="status approved">ADMIN</span>' : ''}</td>
+                <td class="truncate">${escapeHtml(u.email)}</td>
+                <td>${u.phoneVerified ? '<span class="status visible">PASS</span>' : '<span class="status hidden">미인증</span>'}</td>
+                <td><b style="font-size:13px;">${(u.trustToken || 0).toFixed(1)}</b><span style="color:#87909d;font-size:11px;"> / 100</span></td>
+                <td><span class="status ${statusCls}">${u.status}</span></td>
+                <td>
+                  ${u.status === 'ACTIVE'
+                    ? `<button class="ad-btn danger" data-act="suspend" data-id="${u.id}">정지</button>`
+                    : u.status === 'SUSPENDED'
+                      ? `<button class="ad-btn approve" data-act="activate" data-id="${u.id}">복원</button>
+                         <button class="ad-btn danger" data-act="delete" data-id="${u.id}">탈퇴</button>`
+                      : '<span style="color:#aab3c0;font-size:12px;">탈퇴 처리됨</span>'}
+                  <button class="ad-btn" data-act="trust" data-id="${u.id}" data-cur="${u.trustToken || 0}">토큰 조정</button>
+                </td>
+              </tr>`;
+            }).join('');
+            panel.innerHTML = `
+              <div class="ad-table-wrap">
+                <table class="ad-table">
+                  <thead><tr><th>ID</th><th>닉네임/아이디</th><th>이메일</th><th>PASS</th><th>신뢰토큰</th><th>상태</th><th>관리</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>`;
+            panel.querySelectorAll('[data-act]').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const act = btn.dataset.act;
+                if (act === 'suspend' || act === 'activate' || act === 'delete') {
+                  const status = act === 'suspend' ? 'SUSPENDED' : act === 'activate' ? 'ACTIVE' : 'DELETED';
+                  if (!confirm(`정말 ${act === 'suspend' ? '정지' : act === 'activate' ? '복원' : '탈퇴 처리'}하시겠습니까?`)) return;
+                  btn.disabled = true;
+                  try { await api.admin.updateUserStatus(id, status); t(`${status} 처리됨`); loadUsers(); }
+                  catch (e) { t(e.message || '실패'); btn.disabled = false; }
+                } else if (act === 'trust') {
+                  const cur = parseFloat(btn.dataset.cur);
+                  const v = prompt(`신뢰토큰을 입력하세요 (0~100, 현재 ${cur})`, String(cur));
+                  if (v == null) return;
+                  const n = parseFloat(v);
+                  if (isNaN(n) || n < 0 || n > 100) { t('0~100 사이 값을 입력해 주세요.'); return; }
+                  const reason = prompt('조정 사유 (선택)', '관리자 조정') || '관리자 조정';
+                  btn.disabled = true;
+                  try { await api.admin.adjustTrustToken(id, n, reason); t('신뢰토큰 조정 완료'); loadUsers(); }
+                  catch (e) { t(e.message || '실패'); btn.disabled = false; }
+                }
+              });
+            });
+          } catch (e) {
+            panel.innerHTML = '<div class="ad-empty">사용자 로드 실패: ' + (e.message||'') + '</div>';
+          }
+        }
+
+        // ===== NaverPay → AISquare 입금 (AISquare 관리자가 처리) =====
+        async function loadNaverExchanges() {
+          const panel = root.querySelector('[data-panel="naver"]');
+          panel.innerHTML = '<div class="ad-empty">입금 요청 불러오는 중...</div>';
+          try {
+            const list = await api.admin.getNaverExchanges();
+            if (!list || !list.length) { panel.innerHTML = '<div class="ad-empty">처리할 입금 요청이 없습니다.</div>'; return; }
+            const rows = list.map(r => {
+              const cls = r.status === 'PENDING' ? 'pending' : r.status === 'CONFIRMED' ? 'approved' : 'refunded';
+              const naverAmt = r.naverPointAmount || 0;
+              const paidAmt = r.paidPointAmount || Math.floor(naverAmt * (r.exchangeRate || 0.9));
+              return `<tr>
+                <td><code style="font-size:11.5px;color:#87909d">${r.id.slice(0,12)}</code></td>
+                <td><code style="font-size:11.5px;color:#87909d">${(r.userId||'').slice(0,8)}</code></td>
+                <td>
+                  <span style="display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;">
+                    <b style="color:#03C75A">${naverAmt.toLocaleString()}<span style="font-size:11px;color:#87909d;margin-left:2px">NP</span></b>
+                    <span style="color:#c5cad2">→</span>
+                    <b style="color:#1f8a5b">${paidAmt.toLocaleString()}<span style="font-size:11px;color:#87909d;margin-left:2px">P</span></b>
+                  </span>
+                </td>
+                <td>${fmtDate(r.createdAt)}</td>
+                <td><span class="status ${cls}">${r.status}</span>${r.naverTxId ? `<br><span style="font-size:11px;color:#87909d;">${r.naverTxId.slice(0,10)}...</span>` : ''}</td>
+                <td>
+                  ${r.status === 'PENDING' ? `
+                    <button class="ad-btn approve" data-act="confirm" data-id="${r.id}" data-paid="${paidAmt}">${paidAmt.toLocaleString()} P 적립 승인</button>
+                    <button class="ad-btn danger" data-act="reject" data-id="${r.id}">거부</button>
+                  ` : '<span style="color:#aab3c0;font-size:12px;">처리 완료</span>'}
+                </td>
+              </tr>`;
+            }).join('');
+            panel.innerHTML = `
+              <div class="ad-table-wrap">
+                <div style="padding:12px 16px;background:#f0f7ee;border-bottom:1px solid #d4e8cc;font-size:12.5px;color:#1f8a5b;">
+                  ℹ️ 이 탭은 <b>네이버페이 → AISquare 입금</b> 요청만 표시됩니다. AISquare → 네이버페이 송금은 <b>네이버페이 관리자 콘솔</b>에서 처리됩니다.
+                </div>
+                <table class="ad-table">
+                  <thead><tr><th>요청 ID</th><th>유저</th><th>전환 (입금 → 적립)</th><th>일시</th><th>상태</th><th>처리</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>`;
+            panel.querySelectorAll('[data-act]').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const act = btn.dataset.act;
+                if (act === 'confirm') {
+                  const paidAmt = btn.dataset.paid;
+                  if (!confirm(`이 사용자에게 ${Number(paidAmt).toLocaleString()} PAID 포인트를 적립하시겠습니까?`)) return;
+                  btn.disabled = true;
+                  try {
+                    await api.admin.processNaverExchange(id, { action: 'CONFIRMED', naverTxId: 'admin-confirm-' + Date.now().toString(36) });
+                    t(`입금 승인 — ${Number(paidAmt).toLocaleString()} PAID 적립 완료`);
+                    loadNaverExchanges();
+                  } catch (e) { t(e.message || '실패'); btn.disabled = false; }
+                } else if (act === 'reject') {
+                  const reason = prompt('거부 사유', '한도 초과');
+                  if (reason === null) return;
+                  btn.disabled = true;
+                  try {
+                    await api.admin.processNaverExchange(id, { action: 'REJECTED', reason });
+                    t('거부 처리 완료');
+                    loadNaverExchanges();
+                  } catch (e) { t(e.message || '실패'); btn.disabled = false; }
+                }
+              });
+            });
+          } catch (e) {
+            panel.innerHTML = '<div class="ad-empty">입금 요청 로드 실패: ' + (e.message||'') + '</div>';
+          }
+        }
+
+        // ===== Logs =====
+        async function loadLogs() {
+          const panel = root.querySelector('[data-panel="logs"]');
+          panel.innerHTML = '<div class="ad-empty">로그 불러오는 중...</div>';
+          try {
+            const res = await api.admin.getLogs({ limit: 100 });
+            const items = res.items || res || [];
+            if (!items.length) { panel.innerHTML = '<div class="ad-empty">로그가 없습니다.</div>'; return; }
+            const rows = items.map(l => {
+              return `<tr>
+                <td>${fmtDate(l.createdAt)}</td>
+                <td><code style="font-size:11.5px;color:#87909d">${(l.adminId||'').slice(0,8)}</code></td>
+                <td>${escapeHtml(l.action || '-')}</td>
+                <td><code style="font-size:11.5px;color:#87909d">${(l.targetId||'').slice(0,12)}</code></td>
+                <td class="truncate" title="${escapeHtml(JSON.stringify(l.meta||{}))}">${escapeHtml(JSON.stringify(l.meta||{}).slice(0,80))}</td>
+              </tr>`;
+            }).join('');
+            panel.innerHTML = `
+              <div class="ad-table-wrap">
+                <table class="ad-table">
+                  <thead><tr><th>일시</th><th>관리자</th><th>액션</th><th>대상</th><th>메타</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>`;
+          } catch (e) {
+            panel.innerHTML = '<div class="ad-empty">로그 로드 실패: ' + (e.message||'') + '</div>';
+          }
+        }
+
+        function escapeHtml(s) {
+          return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function openReportDetailModal(r) {
+          document.querySelectorAll('.rp-modal-bg, .img-lightbox').forEach(n => n.remove());
+          const reporter = r.reporter ? (r.reporter.name || r.reporter.username) : '-';
+          const buyer = r.order && r.order.buyer ? (r.order.buyer.name || r.order.buyer.username) : '-';
+          const productTitle = r.order && r.order.product ? r.order.product.title : '-';
+          const imgs = (r.imageUrls && r.imageUrls.length) ? r.imageUrls : [];
+          const canProcess = r.status === 'PENDING' || r.status === 'IN_REVIEW';
+
+          const bg = document.createElement('div');
+          bg.className = 'rp-modal-bg';
+          bg.innerHTML = `
+            <div class="rp-modal" role="dialog" aria-modal="true">
+              <div class="rp-modal-head">
+                <h3>🚨 신고 상세 — ${escapeHtml(r.status)}</h3>
+                <button class="x" type="button" aria-label="닫기">×</button>
+              </div>
+              <div class="rp-modal-body">
+                <div class="field">
+                  <div class="k">상품</div>
+                  <div class="v"><b>${escapeHtml(productTitle)}</b></div>
+                </div>
+                <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div>
+                    <div class="k">신고자</div>
+                    <div class="v">${escapeHtml(reporter)} <span style="color:#87909d;font-size:12px">@${escapeHtml((r.reporter && r.reporter.username) || '')}</span></div>
+                  </div>
+                  <div>
+                    <div class="k">구매자</div>
+                    <div class="v">${escapeHtml(buyer)} <span style="color:#87909d;font-size:12px">@${escapeHtml((r.order && r.order.buyer && r.order.buyer.username) || '')}</span></div>
+                  </div>
+                </div>
+                <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div>
+                    <div class="k">접수 일시</div>
+                    <div class="v">${fmtDate(r.createdAt)}</div>
+                  </div>
+                  <div>
+                    <div class="k">주문 번호</div>
+                    <div class="v"><code style="font-size:11.5px;color:#87909d">${escapeHtml(r.orderId || '')}</code></div>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="k">신고 사유</div>
+                  <div class="reason-box">${escapeHtml(r.reason || '(사유 없음)')}</div>
+                </div>
+                <div class="field">
+                  <div class="k">증빙 이미지 (${imgs.length}장)</div>
+                  ${imgs.length === 0
+                    ? '<div class="ig-empty">첨부된 이미지가 없습니다.</div>'
+                    : `<div class="ig-grid">${imgs.map((u, i) => `<div class="ig-tile" data-i="${i}"><img src="${escapeHtml(u)}" alt="증빙 ${i+1}" onerror="this.parentElement.innerHTML='<div style=padding:24px;color:#c8331f;text-align:center;font-size:12px>로드 실패</div>'" /></div>`).join('')}</div>`}
+                </div>
+              </div>
+              <div class="acts">
+                <button type="button" class="close-btn">닫기</button>
+                ${canProcess ? `
+                  <button type="button" class="approve-btn" data-act="approve">환불 거절</button>
+                  <button type="button" class="refund-btn" data-act="refund">환불 처리</button>
+                ` : ''}
+              </div>
+            </div>`;
+          document.body.appendChild(bg);
+
+          const close = () => bg.remove();
+          bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+          bg.querySelector('.x').addEventListener('click', close);
+          bg.querySelector('.close-btn').addEventListener('click', close);
+
+          // 이미지 클릭 → 라이트박스
+          bg.querySelectorAll('.ig-tile').forEach(tile => {
+            tile.addEventListener('click', () => {
+              const i = parseInt(tile.dataset.i, 10);
+              const lb = document.createElement('div');
+              lb.className = 'img-lightbox';
+              lb.innerHTML = `<img src="${escapeHtml(imgs[i])}" alt="증빙 ${i+1}" />`;
+              lb.addEventListener('click', () => lb.remove());
+              document.body.appendChild(lb);
+            });
+          });
+
+          // 처리 버튼
+          bg.querySelectorAll('[data-act]').forEach(b => {
+            b.addEventListener('click', async () => {
+              const action = b.dataset.act === 'refund' ? 'REFUNDED' : 'APPROVED';
+              const label = action === 'REFUNDED' ? '환불 처리' : '환불 거절';
+              if (!confirm(`정말 ${label} 하시겠습니까?`)) return;
+              b.disabled = true;
+              try {
+                await api.admin.processReport(r.id, action);
+                t(`신고 ${label} 완료`);
+                close();
+                loadReports();
+              } catch (e) {
+                t(e.message || '처리 실패');
+                b.disabled = false;
+              }
+            });
+          });
+
+          // ESC
+          const onKey = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
+          document.addEventListener('keydown', onKey);
+        }
+      })();
+    </script>
+  </body>
+</html>

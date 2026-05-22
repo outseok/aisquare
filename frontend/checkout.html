@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>결제 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+          if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .checkout-section { padding: 48px 0 96px; }
+      .checkout-grid { display: grid; grid-template-columns: 1fr 380px; gap: 36px; align-items: flex-start; }
+      .ch-card { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 28px 32px; margin-bottom: 16px; }
+      .ch-card h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.2px; }
+      .ch-card .sub { margin: 0 0 18px; color: #677181; font-size: 13.5px; }
+
+      .ch-summary-item { display: grid; grid-template-columns: 80px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f6; }
+      .ch-summary-item:last-child { border-bottom: 0; }
+      .ch-summary-item img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; }
+      .ch-summary-item .title { font-size: 14px; font-weight: 700; color: #1f2a38; line-height: 1.4; }
+      .ch-summary-item .seller { color: #87909d; font-size: 12px; margin-top: 4px; }
+      .ch-summary-item .price { font-weight: 900; font-size: 15px; color: #1f2a38; }
+
+      .ch-method { display: flex; flex-direction: column; gap: 10px; }
+      .ch-method label {
+        display: flex; align-items: center; gap: 12px;
+        padding: 16px 18px; border: 2px solid #ececf0; border-radius: 12px;
+        cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .ch-method label:hover { background: #fafbfc; }
+      .ch-method input[type="radio"] { width: 18px; height: 18px; accent-color: #1F3AE0; }
+      .ch-method input[type="radio"]:checked + .info { color: #1F3AE0; }
+      .ch-method label:has(input:checked) { border-color: #1F3AE0; background: #fcfcff; }
+      .ch-method .info { flex: 1; }
+      .ch-method .info b { display: block; font-size: 14.5px; color: #1f2a38; margin-bottom: 2px; }
+      .ch-method .info span { color: #677181; font-size: 12.5px; }
+      .ch-method .bal { font-weight: 800; color: #1F3AE0; font-size: 13px; }
+
+      .ch-point-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-bottom: 12px; }
+      .ch-point-row .point-info { color: #677181; font-size: 13px; }
+      .ch-point-row .point-info b { color: #1F3AE0; font-size: 15px; }
+      .ch-point-row .use-all { padding: 6px 12px; background: #eef1ff; border: 0; border-radius: 6px; color: #1F3AE0; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+      .ch-point-row .use-all:hover { background: #dee4ff; }
+      .ch-point-input {
+        width: 100%; height: 44px; padding: 0 14px;
+        border: 1px solid #d4dae4; border-radius: 8px;
+        font-size: 16px; font-family: inherit; font-weight: 700;
+      }
+      .ch-point-input:focus { outline: 0; border-color: #1F3AE0; box-shadow: 0 0 0 3px rgba(31,58,224,0.10); }
+
+      .ch-aside { position: sticky; top: 120px; }
+      .ch-total { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 24px 28px; }
+      .ch-total .row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #3f4a59; }
+      .ch-total .row.discount { color: #1F3AE0; }
+      .ch-total .row.final { border-top: 1px solid #ececf0; margin-top: 10px; padding-top: 16px; font-size: 16px; }
+      .ch-total .row.final b { font-size: 22px; font-weight: 900; color: #1f2a38; }
+      .ch-pay {
+        width: 100%; height: 54px; margin-top: 16px;
+        background: #050505; color: #fff; border: 0; border-radius: 10px;
+        font: inherit; font-size: 16px; font-weight: 900; cursor: pointer;
+        transition: background 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
+      }
+      .ch-pay:hover { background: #1F3AE0; }
+      .ch-pay:disabled { opacity: 0.5; cursor: not-allowed; }
+      .ch-pay:active { transform: scale(0.98); }
+
+      .ch-empty { padding: 80px 0; text-align: center; color: #87909d; }
+
+      @media (max-width: 960px) {
+        .checkout-grid { grid-template-columns: 1fr; }
+        .ch-aside { position: static; }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Checkout">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./admin.html" class="hdr-admin" data-admin-only title="관리자 콘솔">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            관리자
+            <span class="pending-badge hidden" id="hdrAdminBadge"></span>
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="checkout-section">
+        <div class="kmong-wrap">
+          <div id="coRoot">
+            <div class="ch-empty">결제 정보를 불러오는 중...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
+    <script>
+      (async function() {
+        var api = window.AISquareAPI;
+        var qs = new URLSearchParams(location.search);
+        var productId = qs.get('id');
+        var root = document.getElementById('coRoot');
+        var t = function(m){ (window.showToast || alert)(m); };
+
+        if (!api.isLoggedIn() || !api.getJwt()) {
+          location.href = './login.html?redirect=checkout';
+          return;
+        }
+        if (!productId) {
+          root.innerHTML = '<div class="ch-empty">상품이 지정되지 않았습니다.<br><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 이동</a></div>';
+          return;
+        }
+
+        let product, squareBal = 0, pointBal = 0;
+        try {
+          product = await api.products.get(productId);
+          if (!product) throw new Error('상품을 찾을 수 없습니다');
+
+          const [sq, pt] = await Promise.all([
+            api.square.getBalance().catch(() => ({ balance: 0 })),
+            api.point.getBalance().catch(() => ({ balance: 0 })),
+          ]);
+          squareBal = sq.balance || 0;
+          pointBal = pt.balance || 0;
+        } catch (e) {
+          root.innerHTML = '<div class="ch-empty">' + (e.message || '상품 정보 로드 실패') + '</div>';
+          return;
+        }
+
+        const price = product.priceSquare || 0; // KRW (스펙: 1 Square = 1원)
+        const me = api.getCurrentUser() || {};
+
+        root.innerHTML = `
+          <div class="checkout-grid">
+            <div>
+              <div class="ch-card">
+                <h2>주문 상품</h2>
+                <p class="sub">아래 상품을 결제합니다.</p>
+                <div class="ch-summary-item">
+                  <img src="${product.imageUrl || (product.cover && /^https?:\/\//i.test(product.cover) ? product.cover : './assets/' + (product.cover || 'cover-01.svg'))}" alt="" onerror="this.src='./assets/cover-01.svg'" />
+                  <div>
+                    <div class="title">${escapeHtml(product.title)}</div>
+                    <div class="seller">판매자 · ${escapeHtml(product.sellerName || '')}</div>
+                  </div>
+                  <div class="price">₩${n(price)}</div>
+                </div>
+              </div>
+
+              <div class="ch-card">
+                <h2>결제 수단</h2>
+                <p class="sub">Toss Payments 또는 Square Wallet 중 선택하세요.</p>
+                <div class="ch-method">
+                  <label>
+                    <input type="radio" name="method" value="TOSS" checked />
+                    <div class="info">
+                      <b>Toss Payments 직접 결제</b>
+                      <span>카드/계좌이체로 즉시 ₩${n(price)} 결제</span>
+                    </div>
+                  </label>
+                  <label>
+                    <input type="radio" name="method" value="SQUARE" />
+                    <div class="info">
+                      <b>Square Wallet 결제</b>
+                      <span>현재 보유 <span class="bal">${n(squareBal)} Square</span> <span id="sqStatus"></span></span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="ch-card">
+                <h2>Point 할인 적용 (선택)</h2>
+                <p class="sub">보유 Point는 1 Point = 1원으로 즉시 할인됩니다. 최대 결제 금액까지 사용 가능.</p>
+                <div class="ch-point-row">
+                  <div class="point-info">보유 Point <b id="pointBal">${n(pointBal)}</b> Point</div>
+                  <button type="button" class="use-all" id="useAll">전액 사용</button>
+                </div>
+                <input type="number" class="ch-point-input" id="usePoint" placeholder="0" min="0" max="${Math.min(pointBal, price)}" step="100" value="0" />
+              </div>
+            </div>
+
+            <aside class="ch-aside">
+              <div class="ch-total">
+                <div class="row"><span id="rowPriceLabel">상품 금액</span><span id="rowPrice">₩${n(price)}</span></div>
+                <div class="row"><span>거래 수수료 (5%)</span><span id="rowFee">+₩${n(Math.floor(price * 0.05))}</span></div>
+                <div class="row" id="rowConvRow"><span>현금 환산 수수료 (10%)</span><span id="rowConv">+₩${n(Math.floor(price * 1.05 * 0.10))}</span></div>
+                <div class="row discount"><span>Point 할인</span><span id="rowDiscount">−₩0</span></div>
+                <div class="row final"><span id="rowFinalLabel">최종 결제 금액</span><b id="rowFinal">₩${n(Math.floor(price * 1.05))}</b></div>
+                <div class="row" style="color:#1F8A5B;"><span>구매 확정 캐시백</span><span>+${n(Math.floor(price * 0.02))} Square</span></div>
+                <button type="button" class="ch-pay" id="payBtn">₩${n(Math.floor(price * 1.05))} 결제하기</button>
+                <p id="payHint" style="margin:14px 0 0;color:#87909d;font-size:11.5px;line-height:1.5;text-align:center;">Toss Payments 결제창 → 결제 후 72시간 자동 확정 + Hyperledger Fabric 에스크로 잠금.</p>
+              </div>
+            </aside>
+          </div>
+        `;
+
+        const usePointInput = document.getElementById('usePoint');
+        const useAllBtn = document.getElementById('useAll');
+        const rowDiscount = document.getElementById('rowDiscount');
+        const rowFinal = document.getElementById('rowFinal');
+        const payBtn = document.getElementById('payBtn');
+
+        function recalc() {
+          const method = (document.querySelector('input[name="method"]:checked') || {}).value || 'TOSS';
+          let usePt = Math.max(0, Math.min(parseInt(usePointInput.value, 10) || 0, pointBal, price));
+          usePointInput.value = usePt;
+          const isSq = method === 'SQUARE';
+          const baseSurcharged = Math.floor(price * 1.05);
+          // TOSS(현금)는 추가 10% 환산 수수료. SQUARE는 그대로.
+          const grossAmt = isSq ? baseSurcharged : Math.floor(baseSurcharged * 1.10);
+          const fee = grossAmt - price;
+          const finalAmt = grossAmt - usePt;
+          const unit = isSq ? ' Square' : '';
+          const sym = isSq ? '' : '₩';
+          // 상단 요약 라벨/값
+          document.getElementById('rowPriceLabel').textContent = isSq ? '상품 가격' : '상품 금액';
+          document.getElementById('rowPrice').textContent = sym + n(price) + unit;
+          const txFee = isSq ? Math.floor(price * 0.05) : (baseSurcharged - price);
+          document.getElementById('rowFee').textContent = '+' + sym + n(txFee) + unit;
+          // 현금 환산 수수료 행: TOSS만 표시
+          const rowConvRow = document.getElementById('rowConvRow');
+          if (rowConvRow) {
+            rowConvRow.style.display = isSq ? 'none' : '';
+            document.getElementById('rowConv').textContent = '+₩' + n(grossAmt - baseSurcharged);
+          }
+          rowDiscount.textContent = '−' + sym + n(usePt) + (isSq ? ' Point' : '');
+          document.getElementById('rowFinalLabel').textContent = isSq ? '차감 Square' : '최종 결제 금액';
+          rowFinal.textContent = sym + n(finalAmt) + unit;
+          payBtn.textContent = isSq ? (n(finalAmt) + ' Square로 결제하기') : ('₩' + n(finalAmt) + ' 결제하기');
+          payBtn.dataset.final = String(finalAmt);
+          payBtn.dataset.usePoint = String(usePt);
+          // 하단 안내
+          const payHint = document.getElementById('payHint');
+          if (payHint) payHint.innerHTML = isSq
+            ? 'Square Wallet에서 즉시 차감 → 판매자 확정 후 정산. 72시간 자동 확정 + Fabric 에스크로 잠금.'
+            : 'Toss Payments 결제창 → 결제 후 72시간 자동 확정 + Hyperledger Fabric 에스크로 잠금.';
+          // Square 잔액 안내
+          const sqStatus = document.getElementById('sqStatus');
+          if (sqStatus) {
+            if (squareBal >= finalAmt) {
+              sqStatus.innerHTML = '· 충분합니다';
+              sqStatus.style.color = '';
+            } else {
+              sqStatus.innerHTML = '· <span style="color:#c8331f">' + n(finalAmt - squareBal) + ' Square 부족</span> · 선택 시 충전 페이지로 이동';
+            }
+          }
+        }
+        usePointInput.addEventListener('input', recalc);
+        document.querySelectorAll('input[name="method"]').forEach(r => r.addEventListener('change', recalc));
+        useAllBtn.addEventListener('click', () => { usePointInput.value = String(Math.min(pointBal, price)); recalc(); });
+        recalc();
+
+        payBtn.addEventListener('click', async () => {
+          if (!me.phoneVerified && !me.passVerified) {
+            t('PASS 본인인증이 필요합니다.');
+            setTimeout(() => { location.href = './mypage.html'; }, 1000);
+            return;
+          }
+          const method = document.querySelector('input[name="method"]:checked').value;
+          const usePoint = parseInt(payBtn.dataset.usePoint, 10) || 0;
+          const finalKrw = parseInt(payBtn.dataset.final, 10);
+          payBtn.disabled = true;
+          payBtn.textContent = '결제 처리 중...';
+
+          try {
+            if (method === 'SQUARE') {
+              if (squareBal < finalKrw) {
+                const shortBy = finalKrw - squareBal;
+                const go = confirm('Square 잔액이 ₩' + n(shortBy) + ' 부족합니다.\n충전 페이지로 이동하시겠어요?');
+                payBtn.disabled = false;
+                payBtn.textContent = '₩' + n(finalKrw) + ' 결제하기';
+                if (go) {
+                  location.href = './mypage.html?tab=wallet&need=' + encodeURIComponent(shortBy);
+                }
+                return;
+              }
+              // Square Wallet 결제 — BE /orders/:id/pay/square
+              // 1. 먼저 order 생성 (usedPoint은 여기서 전달)
+              const order = await api.orders.create(product.id, 'SQUARE', usePoint);
+              const orderId = order.id;
+              // 2. Square 결제 확정 (POST /orders/:id/pay/square — txHash 필수)
+              const txHash = 'sq-client-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+              const res = await fetch(api.API_BASE + `/orders/${orderId}/pay/square`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.getJwt() },
+                body: JSON.stringify({ txHash }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.message || 'Square 결제 실패');
+              t('Square 결제 완료!');
+              setTimeout(() => { location.href = './mypage.html?tab=purchases'; }, 1200);
+            } else {
+              // Toss — 기존 product.html 흐름 재사용 (request → bypass or 진짜 결제창)
+              const cfg = await api.payments.tossConfig();
+              const reqRes = await api.payments.requestProductPay(product.id);
+              if (cfg.devBypass) {
+                await api.payments.confirmProductPay('dev-fake-key', reqRes.tossOrderId, reqRes.amountKrw);
+                t('결제 완료!');
+                setTimeout(() => { location.href = './mypage.html?tab=purchases'; }, 1200);
+                return;
+              }
+              if (!window.TossPayments) {
+                await new Promise((resolve, reject) => {
+                  const s = document.createElement('script');
+                  s.src = 'https://js.tosspayments.com/v1/payment'; s.onload = resolve; s.onerror = reject;
+                  document.head.appendChild(s);
+                });
+              }
+              const tossPayments = TossPayments(cfg.clientKey);
+              const successUrl = location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=success&amount=' + reqRes.amountKrw;
+              const failUrl = location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=fail';
+              tossPayments.requestPayment('카드', {
+                amount: reqRes.amountKrw,
+                orderId: reqRes.tossOrderId,
+                orderName: reqRes.orderName,
+                successUrl, failUrl,
+                customerName: me.nickname || '구매자',
+              });
+            }
+          } catch (e) {
+            console.error('checkout failed:', e);
+            payBtn.disabled = false;
+            payBtn.textContent = '₩' + n(parseInt(payBtn.dataset.final, 10) || price) + ' 결제하기';
+            t(e.message || '결제 실패');
+          }
+        });
+
+        function n(v) { return Number(v || 0).toLocaleString('ko-KR'); }
+        function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+      })();
+    </script>
+  </body>
+</html>

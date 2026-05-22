@@ -3,5 +3,24 @@
 
 # Backend (handled by backend/.gitignore too)
 backend/.env
+backend/.env.local
 backend/node_modules/
 backend/dist/
+backend/prisma/*.bak
+backend/prisma/schema.prisma.bak
+
+# Fabric — 민감 자료/대용량 파일
+fabric/network/crypto-config/
+fabric/network/channel-artifacts/
+fabric/bin/
+fabric/builders/
+fabric/config/
+fabric/install.sh
+fabric/chaincode/*/vendor/
+fabric/chaincode/*/go.sum
+
+# OS / Editor
+.DS_Store
+*.swp
+*.swo
+node_modules/

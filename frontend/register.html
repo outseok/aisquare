@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>회원가입 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+          if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body data-screen-label="AISquare Register">
+        <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a class="active" href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./admin.html" class="hdr-admin" data-admin-only title="관리자 콘솔">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            관리자
+            <span class="pending-badge hidden" id="hdrAdminBadge"></span>
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="auth-section">
+        <div class="auth-card">
+          <div class="auth-brand">
+            <object class="brand-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+            <p>AI 노하우 마켓플레이스</p>
+          </div>
+          <h2>회원가입</h2>
+          <form id="registerForm" class="auth-form" autocomplete="on">
+            <div class="auth-field">
+              <label for="reg-name">이름</label>
+              <input id="reg-name" name="name" type="text" placeholder="실명" required />
+            </div>
+            <div class="auth-field">
+              <label for="reg-username">아이디</label>
+              <input id="reg-username" name="username" type="text" placeholder="영문·숫자 조합 (4자 이상)" minlength="4" pattern="[a-zA-Z0-9]+" autocomplete="username" required />
+              <span class="hint">영문, 숫자만 사용 가능합니다.</span>
+            </div>
+            <div class="auth-field">
+              <label for="reg-nickname">닉네임</label>
+              <input id="reg-nickname" name="nickname" type="text" placeholder="서비스에서 사용할 이름" required />
+            </div>
+            <div class="auth-field">
+              <label for="reg-email">이메일</label>
+              <input id="reg-email" name="email" type="email" placeholder="example@email.com" required />
+            </div>
+            <div class="auth-field">
+              <label for="reg-phone">휴대폰 번호</label>
+              <input id="reg-phone" name="phone" type="tel" placeholder="01012345678 (-제외)" pattern="01[0-9]{8,9}" maxlength="11" autocomplete="tel" required />
+              <span class="hint">PASS 본인인증 시 입력한 번호와 일치해야 합니다.</span>
+            </div>
+            <div class="auth-field">
+              <label for="reg-password">비밀번호</label>
+              <input id="reg-password" name="password" type="password" placeholder="8자 이상" minlength="8" autocomplete="new-password" required />
+            </div>
+            <div class="auth-field">
+              <label for="reg-password2">비밀번호 확인</label>
+              <input id="reg-password2" name="passwordConfirm" type="password" placeholder="비밀번호 재입력" minlength="8" autocomplete="new-password" required />
+            </div>
+            <p class="auth-note">구매·판매·리뷰 시 PASS 본인인증이 추가로 필요합니다.</p>
+            <button class="auth-submit" type="submit">회원가입</button>
+          </form>
+          <p class="auth-foot">이미 계정이 있으신가요? <a href="./login.html">로그인</a></p>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
+  </body>
+</html>

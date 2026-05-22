@@ -5,7 +5,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
-import { ReportStatus } from '@prisma/client';
+import { ReportStatus } from '../common/prisma-enums';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -52,6 +52,12 @@ export class AdminController {
     return this.adminService.getSettlementStats();
   }
 
+  @Get('unread-count')
+  @ApiOperation({ summary: '[관리자] 미처리 신고·전환 카운트 (헤더 뱃지용)' })
+  getUnreadCount() {
+    return this.adminService.getUnreadCount();
+  }
+
   @Get('products')
   @ApiOperation({ summary: '[관리자] 전체 상품 목록' })
   getAllProducts(@Query('page') page?: number, @Query('limit') limit?: number) {
@@ -62,5 +68,60 @@ export class AdminController {
   @ApiOperation({ summary: '[관리자] 관리자 액션 로그' })
   getAdminLogs(@Query('page') page?: number, @Query('limit') limit?: number) {
     return this.adminService.getAdminLogs(Number(page) || 1, Number(limit) || 50);
+  }
+
+  // ── 사용자 관리 ─────────────────────────────────────────
+  @Get('users')
+  @ApiOperation({ summary: '[관리자] 사용자 목록' })
+  getUsers(@Query('q') q?: string, @Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.adminService.getUsers(q, Number(page) || 1, Number(limit) || 50);
+  }
+
+  @Patch('users/:id/status')
+  @ApiOperation({ summary: '[관리자] 사용자 상태 변경 (ACTIVE / SUSPENDED / DELETED)' })
+  updateUserStatus(
+    @Param('id') id: string,
+    @Body() body: { status: 'ACTIVE' | 'SUSPENDED' | 'DELETED' },
+    @Request() req,
+  ) {
+    return this.adminService.updateUserStatus(id, body.status, req.user.id);
+  }
+
+  @Patch('users/:id/trust-token')
+  @ApiOperation({ summary: '[관리자] 신뢰토큰 수동 조정 (0-100)' })
+  adjustTrustToken(
+    @Param('id') id: string,
+    @Body() body: { value: number; reason?: string },
+    @Request() req,
+  ) {
+    return this.adminService.adjustTrustToken(id, body.value, body.reason || '관리자 조정', req.user.id);
+  }
+
+  // ── NaverPay 전환 처리 ─────────────────────────────────
+  @Get('naver-exchanges')
+  @ApiOperation({ summary: '[관리자] NaverPay 전환 목록' })
+  getNaverExchanges(@Query('status') status?: string) {
+    return this.adminService.getNaverExchanges(status);
+  }
+
+  @Patch('naver-exchanges/:id/process')
+  @ApiOperation({ summary: '[관리자] NaverPay 전환 처리 (CONFIRMED / REJECTED)' })
+  processNaverExchange(
+    @Param('id') id: string,
+    @Body() body: { action: 'CONFIRMED' | 'REJECTED'; naverTxId?: string; reason?: string },
+    @Request() req,
+  ) {
+    return this.adminService.processNaverExchange(id, body, req.user.id);
+  }
+
+  // ── 강제 환불 (Escrow 수동 unlock) ─────────────────────
+  @Patch('orders/:id/force-refund')
+  @ApiOperation({ summary: '[관리자] 주문 강제 환불 (관리자 권한)' })
+  forceRefund(
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+    @Request() req,
+  ) {
+    return this.adminService.forceRefund(id, body.reason, req.user.id);
   }
 }

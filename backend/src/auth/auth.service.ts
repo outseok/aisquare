@@ -65,6 +65,22 @@ export class AuthService {
   }
 
   async verifyPhone(userId: string, dto: VerifyPhoneDto) {
+    // Dev escape hatch — SKIP_PASS_VERIFICATION=1 makes verifyPhone a no-op
+    // that just marks the user as verified, without calling iamport.
+    if (process.env.SKIP_PASS_VERIFICATION === '1') {
+      const me = await this.prisma.user.findUnique({ where: { id: userId } });
+      const updated = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          phoneVerified: true,
+          passId: 'dev-skip-' + Date.now(),
+          passName: me?.name ?? null,
+          passVerifiedAt: new Date(),
+        },
+      });
+      return this.sanitize(updated);
+    }
+
     const impKey = process.env.IMP_KEY;
     const impSecret = process.env.IMP_SECRET;
     if (!impKey || !impSecret) throw new BadRequestException('본인인증 서비스 설정이 필요합니다');
@@ -110,7 +126,12 @@ export class AuthService {
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { phoneVerified: true, passId: cert.unique_key ?? null },
+      data: {
+        phoneVerified: true,
+        passId: cert.unique_key ?? null,
+        passName: cert.name ?? null,
+        passVerifiedAt: new Date(),
+      },
     });
 
     await this.prisma.verificationLog.create({
@@ -134,6 +155,37 @@ export class AuthService {
     return this.sanitize(updated);
   }
 
+  async updateProfile(
+    userId: string,
+    dto: { nickname?: string; email?: string; bankName?: string; accountNumber?: string; accountHolder?: string },
+  ) {
+    const data: any = {};
+    if (dto.nickname !== undefined) {
+      const exists = await this.prisma.user.findFirst({
+        where: { nickname: dto.nickname, NOT: { id: userId } },
+      });
+      if (exists) throw new BadRequestException('이미 사용중인 닉네임입니다');
+      data.nickname = dto.nickname;
+    }
+    if (dto.email !== undefined) {
+      const exists = await this.prisma.user.findFirst({
+        where: { email: dto.email, NOT: { id: userId } },
+      });
+      if (exists) throw new BadRequestException('이미 사용중인 이메일입니다');
+      data.email = dto.email;
+    }
+    if (dto.bankName !== undefined) data.bankName = dto.bankName || null;
+    if (dto.accountNumber !== undefined) data.accountNumber = dto.accountNumber || null;
+    if (dto.accountHolder !== undefined) data.accountHolder = dto.accountHolder || null;
+
+    if (Object.keys(data).length === 0) {
+      const current = await this.prisma.user.findUnique({ where: { id: userId } });
+      return this.sanitize(current!);
+    }
+    const updated = await this.prisma.user.update({ where: { id: userId }, data });
+    return this.sanitize(updated);
+  }
+
   async getTokenHistory(userId: string) {
     return this.tokenService.getHistory(userId);
   }
@@ -144,6 +196,75 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+  }
+
+  async revokePass(userId: string) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        phoneVerified: false,
+        passId: null,
+        passName: null,
+        passVerifiedAt: null,
+      },
+    });
+    await this.prisma.verificationLog.create({
+      data: { userId, type: 'PHONE', status: 'SUCCESS', meta: { event: 'revoked', at: new Date().toISOString() } },
+    }).catch(() => {});
+    return this.sanitize(updated);
+  }
+
+  async deleteAccount(userId: string) {
+    const ownProducts = await this.prisma.product.findMany({
+      where: { sellerId: userId },
+      select: { id: true },
+    });
+    const ownProductIds = ownProducts.map((p) => p.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (ownProductIds.length > 0) {
+        await tx.review.deleteMany({ where: { productId: { in: ownProductIds } } });
+      }
+      await tx.review.deleteMany({ where: { reviewerId: userId } });
+
+      await tx.report.deleteMany({ where: { reporterId: userId } });
+      if (ownProductIds.length > 0) {
+        const orderIds = (await tx.order.findMany({
+          where: { productId: { in: ownProductIds } },
+          select: { id: true },
+        })).map((o) => o.id);
+        if (orderIds.length > 0) {
+          await tx.report.deleteMany({ where: { orderId: { in: orderIds } } });
+        }
+      }
+
+      const wishlistWhere: any = ownProductIds.length > 0
+        ? { OR: [{ userId }, { productId: { in: ownProductIds } }] }
+        : { userId };
+      await tx.wishlist.deleteMany({ where: wishlistWhere });
+      await tx.cartItem.deleteMany({ where: wishlistWhere });
+
+      const orderWhere: any = ownProductIds.length > 0
+        ? { OR: [{ buyerId: userId }, { productId: { in: ownProductIds } }] }
+        : { buyerId: userId };
+      await tx.order.deleteMany({ where: orderWhere });
+
+      if (ownProductIds.length > 0) {
+        await tx.product.deleteMany({ where: { sellerId: userId } });
+      }
+
+      await tx.pointLog.deleteMany({ where: { userId } });
+      await tx.tokenLog.deleteMany({ where: { userId } });
+      await tx.verificationLog.deleteMany({ where: { userId } });
+      await tx.walletCharge.deleteMany({ where: { userId } });
+
+      try { await (tx as any).naverPointExchange.deleteMany({ where: { userId } }); } catch {}
+      try { await (tx as any).tossPayment.deleteMany({ where: { userId } }); } catch {}
+
+      await tx.user.delete({ where: { id: userId } });
+    });
+
+    return { ok: true };
   }
 
   private sanitize(user: any) {

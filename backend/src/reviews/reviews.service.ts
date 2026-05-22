@@ -88,10 +88,11 @@ export class ReviewsService {
     await this.prisma.pointLog.create({
       data: {
         userId,
-        type: 'EARN_BONUS',
+        type: 'EARN_ACTIVITY',
+        category: 'ACTIVITY',  // 리뷰 작성 = 활동 포인트 (네이버 전환 불가)
         amount: 100,
         balance: (latest?.balance || 0) + 100,
-        memo: '리뷰 작성 보상',
+        memo: '리뷰 작성 보상 (ACTIVITY)',
       },
     });
   }

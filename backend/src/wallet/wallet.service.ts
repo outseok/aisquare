@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
+import { FabricService } from '../fabric/fabric.service';
 import { PrepareChargeDto } from './dto/prepare-charge.dto';
 import { ConfirmChargeDto } from './dto/confirm-charge.dto';
 
@@ -14,7 +15,75 @@ const MIN_CHARGE_KRW = 5500;  // 최소 5,500원
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fabric: FabricService,
+  ) {}
+
+  async getSquareBalance(userId: string) {
+    const balance = await this.fabric.getSquareBalance(userId).catch((e) => {
+      this.logger.warn(`Fabric getSquareBalance 실패: ${e?.message}`);
+      return 0;
+    });
+    return { balance };
+  }
+
+  async getSquareHistory(userId: string) {
+    const history = await this.fabric.getSquareHistory(userId).catch((e) => {
+      this.logger.warn(`Fabric getSquareHistory 실패: ${e?.message}`);
+      return [] as unknown[];
+    });
+    return { items: history };
+  }
+
+  /**
+   * YR 브랜치 호환 — Toss 검증 없는 즉시 충전.
+   * 사용처: 데모/개발 환경에서 결제 게이트웨이 우회로 잔액 적립.
+   * 검증 PASS, 단위(최소 5,000 · 1,000 단위)는 여기서 함.
+   */
+  async instantCharge(userId: string, dto: { squareAmount: number }) {
+    const squareAmount = Math.floor(Number(dto.squareAmount));
+    if (!Number.isFinite(squareAmount) || squareAmount < MIN_CHARGE_SQ) {
+      throw new BadRequestException(`최소 ${MIN_CHARGE_SQ.toLocaleString()} Square부터 충전 가능합니다`);
+    }
+    if (squareAmount % CHARGE_UNIT_SQ !== 0) {
+      throw new BadRequestException(`${CHARGE_UNIT_SQ.toLocaleString()} Square 단위로 입력해주세요`);
+    }
+    const units = squareAmount / CHARGE_UNIT_SQ;
+    const amountKrw = units * CHARGE_UNIT_KRW;
+
+    const charge = await this.prisma.walletCharge.create({
+      data: { userId, amountKrw, squareAmount, status: 'COMPLETED', txHash: 'instant' },
+    });
+
+    // 실제 Square 적립
+    try {
+      await this.fabric.depositSquare(
+        userId,
+        squareAmount,
+        `즉시 충전 ${amountKrw.toLocaleString()}원 → ${squareAmount.toLocaleString()} SQ (charge=${charge.id})`,
+      );
+    } catch (err: any) {
+      this.logger.error(`Fabric depositSquare 실패: ${err?.message}`);
+      await this.prisma.walletCharge.update({ where: { id: charge.id }, data: { status: 'FAILED' } });
+      throw new BadRequestException('Square 적립 중 오류가 발생했습니다');
+    }
+
+    // Point 보너스 (충전 KRW의 0.1%)
+    await this.grantChargeBonus(userId, amountKrw);
+
+    const balance = await this.fabric.getSquareBalance(userId).catch(() => 0);
+    const pointBonus = Math.floor(amountKrw * 0.001);
+
+    return {
+      success: true,
+      chargeId: charge.id,
+      squareAmount,
+      amountKrw,
+      pointBonus,
+      balance,
+    };
+  }
 
   async prepareCharge(userId: string, dto: PrepareChargeDto) {
     const units = Math.floor(dto.amountKrw / CHARGE_UNIT_KRW);
@@ -68,8 +137,19 @@ export class WalletService {
       throw new BadRequestException(err?.response?.data?.message || 'Toss 결제 승인 실패');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    await this.giveSquareTokens(user?.squareWalletAddr, charge.squareAmount, chargeId);
+    // Fabric에 실제 Square 적립 (체인코드 wallet.DepositSquare)
+    try {
+      await this.fabric.depositSquare(
+        userId,
+        charge.squareAmount,
+        `Toss 충전 ${charge.amountKrw.toLocaleString()}원 → ${charge.squareAmount.toLocaleString()} SQ (charge=${chargeId})`,
+      );
+    } catch (err: any) {
+      this.logger.error(`Fabric depositSquare 실패: ${err?.message}`);
+      throw new BadRequestException(
+        '결제는 승인됐으나 Square 적립 중 오류가 발생했습니다. 관리자에게 문의해주세요.',
+      );
+    }
 
     // 충전 적립금: 충전 금액의 0.1% Point 지급 (기획서 5절)
     await this.grantChargeBonus(userId, charge.amountKrw);
@@ -80,6 +160,62 @@ export class WalletService {
     });
 
     return updated;
+  }
+
+  /**
+   * Square Wallet 출금 (정산 받기) — 데모 구현:
+   * 1) 사용자 계좌 등록 확인
+   * 2) Fabric DeductSquare로 잔액 차감
+   * 3) DB에 adminLog로 출금 요청 기록 (실 송금은 시뮬레이션)
+   */
+  async withdraw(userId: string, squareAmount: number) {
+    if (squareAmount < 5000) throw new BadRequestException('최소 5,000 Square부터 환불 가능합니다');
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다');
+    if (!user.bankName || !user.accountNumber || !user.accountHolder) {
+      throw new BadRequestException('정산 계좌를 먼저 등록해주세요 (마이페이지 → 계정 정보)');
+    }
+
+    const balance = await this.fabric.getSquareBalance(userId).catch(() => 0);
+    if (balance < squareAmount) {
+      throw new BadRequestException(`Square 잔액 부족: 보유 ${balance.toLocaleString()} / 환불 ${squareAmount.toLocaleString()}`);
+    }
+
+    const refId = 'wd-' + Date.now().toString(36);
+    try {
+      await this.fabric.deductSquare(userId, squareAmount, `환불 ${refId} → ${user.bankName} ${user.accountNumber}`);
+    } catch (err: any) {
+      this.logger.error(`Fabric deductSquare 실패: ${err?.message}`);
+      throw new BadRequestException('환불 처리 중 오류가 발생했습니다');
+    }
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId: 'system',
+        action: 'WITHDRAW',
+        targetId: userId,
+        meta: {
+          refId,
+          squareAmount,
+          krwAmount: squareAmount,
+          bankName: user.bankName,
+          accountNumber: user.accountNumber,
+          accountHolder: user.accountHolder,
+          status: 'TRANSFERRED',
+        } as any,
+      },
+    });
+
+    const newBalance = await this.fabric.getSquareBalance(userId).catch(() => Math.max(0, balance - squareAmount));
+    return {
+      success: true,
+      refId,
+      squareAmount,
+      krwAmount: squareAmount,
+      balance: newBalance,
+      message: `${squareAmount.toLocaleString()} Square가 ${user.bankName} ${user.accountNumber} (${user.accountHolder})로 전송 처리되었습니다.`,
+    };
   }
 
   async getChargeHistory(userId: string) {
@@ -117,10 +253,19 @@ export class WalletService {
       data: {
         userId,
         type: 'EARN_BONUS',
+        category: 'PAID', // 충전 적립 = 결제 포인트 (외부 전환 가능)
         amount: bonus,
         balance: (latest?.balance || 0) + bonus,
         memo: `충전 적립금: ${amountKrw.toLocaleString()}원 충전`,
       },
     });
+
+    // Fabric naver-channel exchange chaincode에도 PAID 잔액 동기화
+    // → 이게 빠지면 사용자가 PAID 전환 시 체인이 "have 0"으로 거부함
+    try {
+      await this.fabric.issuePaid(userId, bonus, `충전 적립금 (${amountKrw}원)`);
+    } catch (e: any) {
+      this.logger.warn(`Fabric IssuePaid 실패 (DB-체인 불일치): ${e?.message}`);
+    }
   }
 }

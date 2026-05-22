@@ -21,17 +21,26 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
 
   private gateway: any = null;
   private grpcClient: any = null;
+  // NaverPayMSP 자격증명으로 따로 연결 — naver-channel ConfirmNaverExchange/Reject 호출용
+  private naverGateway: any = null;
+  private naverGrpcClient: any = null;
 
   async onModuleInit() {
     if (this.useFabric) {
       try {
         await this.connect();
-        this.logger.log('Fabric Gateway 연결 성공');
+        this.logger.log('Fabric Gateway 연결 성공 (AISquareMSP)');
       } catch (e: any) {
         this.logger.error(`Fabric Gateway 연결 실패: ${e.message}`);
         this.logger.warn(
           '@hyperledger/fabric-gateway, @grpc/grpc-js 패키지가 설치되어 있는지 확인하세요.',
         );
+      }
+      try {
+        await this.connectNaver();
+        this.logger.log('Fabric Gateway 연결 성공 (NaverPayMSP)');
+      } catch (e: any) {
+        this.logger.warn(`NaverPay Gateway 연결 실패 (네이버 어드민 기능 비활성): ${e?.message}`);
       }
     } else {
       this.logger.log('Fabric 데모 모드 활성화 (FABRIC_ENABLED=false)');
@@ -39,12 +48,10 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    if (this.gateway) {
-      this.gateway.close();
-    }
-    if (this.grpcClient) {
-      this.grpcClient.close();
-    }
+    if (this.gateway) this.gateway.close();
+    if (this.grpcClient) this.grpcClient.close();
+    if (this.naverGateway) this.naverGateway.close();
+    if (this.naverGrpcClient) this.naverGrpcClient.close();
   }
 
   // ── Fabric Gateway 연결 ─────────────────────────────────────────────────────
@@ -59,7 +66,13 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
 
     const tlsCert = fs.readFileSync(tlsCertPath);
     const credentials = grpc.credentials.createSsl(tlsCert);
-    this.grpcClient = new grpc.Client(peerEndpoint, credentials);
+    // peer TLS 인증서가 peer0.aisquare.com용으로 발급돼 있어서 localhost 접속 시 SNI mismatch.
+    // 클라이언트가 인증서 검증할 호스트명을 강제 지정.
+    const tlsHost = process.env.FABRIC_PEER_TLS_HOST || 'peer0.aisquare.com';
+    this.grpcClient = new grpc.Client(peerEndpoint, credentials, {
+      'grpc.ssl_target_name_override': tlsHost,
+      'grpc.default_authority': tlsHost,
+    });
 
     const certBase64 = process.env.FABRIC_ADMIN_CERT_BASE64!;
     const keyBase64 = process.env.FABRIC_ADMIN_KEY_BASE64!;
@@ -82,10 +95,79 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private getContract(chaincodeName: string) {
-    const channel = process.env.FABRIC_CHANNEL ?? 'recode-channel';
+  /** NaverPayMSP 자격증명으로 별도 Gateway 연결 (naver-channel 전용) */
+  private async connectNaver() {
+    const { connect, signers } = await import('@hyperledger/fabric-gateway' as any);
+    const grpc = await import('@grpc/grpc-js' as any);
+
+    const peerEndpoint = process.env.FABRIC_NAVER_PEER_ENDPOINT || 'localhost:8051';
+    const tlsCertPath = process.env.FABRIC_NAVER_TLS_CERT_PATH
+      || '/root/aisquare/fabric/network/crypto-config/peerOrganizations/naverpay.com/peers/peer0.naverpay.com/tls/ca.crt';
+    const certPath = process.env.FABRIC_NAVER_CERT_PATH
+      || '/root/aisquare/fabric/network/crypto-config/peerOrganizations/naverpay.com/users/Admin@naverpay.com/msp/signcerts/Admin@naverpay.com-cert.pem';
+    const keystoreDir = process.env.FABRIC_NAVER_KEYSTORE_DIR
+      || '/root/aisquare/fabric/network/crypto-config/peerOrganizations/naverpay.com/users/Admin@naverpay.com/msp/keystore';
+    const tlsHost = process.env.FABRIC_NAVER_PEER_TLS_HOST || 'peer0.naverpay.com';
+    const mspId = process.env.FABRIC_NAVER_MSP_ID || 'NaverPayMSP';
+
+    const tlsCert = fs.readFileSync(tlsCertPath);
+    const credentials = grpc.credentials.createSsl(tlsCert);
+    this.naverGrpcClient = new grpc.Client(peerEndpoint, credentials, {
+      'grpc.ssl_target_name_override': tlsHost,
+      'grpc.default_authority': tlsHost,
+    });
+
+    const certPem = fs.readFileSync(certPath);
+    const keyFiles = fs.readdirSync(keystoreDir).filter((f) => !f.startsWith('.'));
+    if (keyFiles.length === 0) throw new Error(`NaverPay keystore에 키 없음: ${keystoreDir}`);
+    const keyPem = fs.readFileSync(`${keystoreDir}/${keyFiles[0]}`);
+
+    const identity = { mspId, credentials: certPem };
+    const privateKey = crypto.createPrivateKey(keyPem);
+    const signer = signers.newPrivateKeySigner(privateKey);
+
+    this.naverGateway = connect({
+      client: this.naverGrpcClient,
+      identity,
+      signer,
+      evaluateOptions: () => ({ deadline: Date.now() + 5_000 }),
+      endorseOptions: () => ({ deadline: Date.now() + 15_000 }),
+      submitOptions: () => ({ deadline: Date.now() + 5_000 }),
+      commitStatusOptions: () => ({ deadline: Date.now() + 60_000 }),
+    });
+  }
+
+  private getContract(chaincodeName: string, channelName?: string) {
+    const channel = channelName ?? process.env.FABRIC_CHANNEL ?? 'internal-channel';
     const network = this.gateway.getNetwork(channel);
     return network.getContract(chaincodeName);
+  }
+
+  private getNaverContract(chaincode: string, channel = 'naver-channel') {
+    if (!this.naverGateway) throw new Error('NaverPay Gateway 미연결 — FABRIC_NAVER_* env 확인');
+    return this.naverGateway.getNetwork(channel).getContract(chaincode);
+  }
+
+  /** NaverPayMSP 신원으로 ConfirmNaverExchange 호출 (체인코드 가드 통과) */
+  async naverConfirmExchange(exchangeId: string, naverTxId: string): Promise<string> {
+    if (this.useFabric) {
+      const c = this.getNaverContract('exchange');
+      const r = await c.submitTransaction('ConfirmNaverExchange', exchangeId, naverTxId);
+      return Buffer.from(r).toString('utf-8');
+    }
+    this.logger.log(`[Fabric-Demo] (Naver) ConfirmNaverExchange | ex=${exchangeId} tx=${naverTxId}`);
+    return `naver-confirm-${exchangeId}`;
+  }
+
+  /** NaverPayMSP 신원으로 RejectNaverExchange 호출 */
+  async naverRejectExchange(exchangeId: string, reason: string): Promise<string> {
+    if (this.useFabric) {
+      const c = this.getNaverContract('exchange');
+      const r = await c.submitTransaction('RejectNaverExchange', exchangeId, reason);
+      return Buffer.from(r).toString('utf-8');
+    }
+    this.logger.log(`[Fabric-Demo] (Naver) RejectNaverExchange | ex=${exchangeId} reason=${reason}`);
+    return `naver-reject-${exchangeId}`;
   }
 
   private async submitTx(chaincode: string, fn: string, args: string[]): Promise<string> {
@@ -96,6 +178,19 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
 
   private async evaluateTx(chaincode: string, fn: string, args: string[]): Promise<string> {
     const contract = this.getContract(chaincode);
+    const result = await contract.evaluateTransaction(fn, ...args);
+    return Buffer.from(result).toString('utf-8');
+  }
+
+  // 채널 지정 가능한 버전 (internal-channel / naver-channel)
+  private async submit(channel: string, chaincode: string, fn: string, ...args: string[]): Promise<string> {
+    const contract = this.getContract(chaincode, channel);
+    const result = await contract.submitTransaction(fn, ...args);
+    return Buffer.from(result).toString('utf-8');
+  }
+
+  private async evaluate(channel: string, chaincode: string, fn: string, ...args: string[]): Promise<string> {
+    const contract = this.getContract(chaincode, channel);
     const result = await contract.evaluateTransaction(fn, ...args);
     return Buffer.from(result).toString('utf-8');
   }
@@ -311,5 +406,94 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
   /** @deprecated deductSquare() 사용 권장 */
   async deductPoints(userId: string, amount: number, memo: string): Promise<string> {
     return this.deductSquare(userId, amount, memo);
+  }
+
+  // ── naver-channel / exchange chaincode 호출 ─────────────────────────
+  /** 결제 포인트(PAID) → 네이버페이 전환 요청 (PAID 차감 + PENDING 기록) */
+  async exchangeToNaver(exchangeId: string, userId: string, amount: number): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] ExchangeToNaver | ex=${exchangeId} user=${userId} amt=${amount}`);
+      return exchangeId;
+    }
+    return await this.submit('naver-channel', 'exchange', 'ExchangeToNaver',
+      exchangeId, userId, String(amount));
+  }
+
+  /** NaverPay가 자기 시스템에서 적립 확정 후 호출 (NaverPayMSP 권한 필요) */
+  async confirmNaverExchange(exchangeId: string, naverTxId: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] ConfirmNaverExchange | ex=${exchangeId} naverTx=${naverTxId}`);
+      return exchangeId;
+    }
+    return await this.submit('naver-channel', 'exchange', 'ConfirmNaverExchange', exchangeId, naverTxId);
+  }
+
+  /** PAID 포인트 적립 (충전·결제 캐시백) — naver-channel exchange chaincode */
+  async issuePaid(userId: string, amount: number, memo: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] IssuePaid | user=${userId} amt=${amount} memo=${memo}`);
+      return 'demo-paid';
+    }
+    return await this.submit('naver-channel', 'exchange', 'IssuePaid', userId, String(amount), memo);
+  }
+
+  /** PAID 잔액 조회 */
+  async getPaidBalance(userId: string): Promise<number> {
+    if (!this.useFabric) return 0;
+    const res = await this.evaluate('naver-channel', 'exchange', 'GetPaidBalance', userId);
+    return parseInt(res || '0', 10);
+  }
+
+  // ── NaverPay 데모용 stub (체인코드 v2 함수 — 미배포 시 데모 응답 반환) ────
+  /** 체인코드에 데모 키 등록 (관리자용) */
+  async setDemoNaverKey(key: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] SetDemoNaverKey | key=${key?.slice(0, 6)}...`);
+      return 'fabric-demo';
+    }
+    return await this.submit('naver-channel', 'exchange', 'SetDemoNaverKey', key).catch((e) => {
+      this.logger.warn(`SetDemoNaverKey 실패(체인코드 미배포 가능): ${e?.message}`);
+      return 'fabric-demo';
+    });
+  }
+
+  /** 데모: PENDING → CONFIRMED 처리 (가상 키 인증) */
+  async demoConfirmNaverExchange(exchangeId: string, naverTxId: string, demoKey: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] DemoConfirmNaverExchange | ex=${exchangeId} tx=${naverTxId}`);
+      return 'fabric-demo-confirmed';
+    }
+    return await this.submit('naver-channel', 'exchange', 'DemoConfirmExchange', exchangeId, naverTxId, demoKey).catch((e) => {
+      this.logger.warn(`DemoConfirmNaverExchange 실패: ${e?.message}`);
+      return 'fabric-demo-confirmed';
+    });
+  }
+
+  /** NaverPay → AISquare 입금 기록 (가상 키 인증) */
+  async recordFromNaver(exchangeId: string, userId: string, naverTxId: string, amount: number, demoKey: string): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] RecordFromNaver | ex=${exchangeId} user=${userId} amt=${amount}`);
+      return 'fabric-demo-from-naver';
+    }
+    return await this.submit('naver-channel', 'exchange', 'RecordFromNaver', exchangeId, userId, naverTxId, String(amount), demoKey).catch((e) => {
+      this.logger.warn(`RecordFromNaver 실패: ${e?.message}`);
+      return 'fabric-demo-from-naver';
+    });
+  }
+
+  /** 일반(실제 NaverPay 연동용) 양방향 기록 */
+  async recordNaverExchange(
+    exchangeId: string, userId: string, direction: string,
+    paidAmount: number, naverAmount: number, naverTxId: string,
+  ): Promise<string> {
+    if (!this.useFabric) {
+      this.logger.log(`[Fabric-Demo] RecordNaverExchange | ex=${exchangeId} dir=${direction} paid=${paidAmount} naver=${naverAmount}`);
+      return 'fabric-demo-recorded';
+    }
+    return await this.submit('naver-channel', 'exchange', 'RecordNaverExchange',
+      exchangeId, userId, direction, String(paidAmount), String(naverAmount), naverTxId).catch((e) => {
+      this.logger.warn(`RecordNaverExchange 실패: ${e?.message}`);
+      return 'fabric-demo-recorded';
+    });
   }
 }

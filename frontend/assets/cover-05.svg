@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 190" preserveAspectRatio="xMidYMid slice" role="img">
+  <rect width="320" height="190" fill="#fff"></rect>
+  
+  <rect width="320" height="190" fill="#0B0D12"></rect>
+  
+  <rect x="20" y="14" width="280" height="140" rx="6" fill="#E84B7A"></rect>
+  <rect x="20" y="14" width="280" height="140" rx="6" fill="url(#vfade)"></rect>
+  <defs><linearGradient id="vfade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#000" stop-opacity="0"></stop><stop offset="100%" stop-color="#000" stop-opacity="0.55"></stop></linearGradient></defs>
+  
+  <text x="36" y="60" font-family="Pretendard,sans-serif" font-size="20" font-weight="900" fill="#fff" letter-spacing="-0.5">&#34;3초 안에&#34;</text>
+  <text x="36" y="84" font-family="Pretendard,sans-serif" font-size="20" font-weight="900" fill="#E4F25C" letter-spacing="-0.5">시청자 사로잡기</text>
+  
+  <g transform="translate(160, 100)">
+    <circle r="22" fill="#fff" fill-opacity="0.95"></circle>
+    <polygon points="-7,-10 -7,10 12,0" fill="#0B0D12"></polygon>
+  </g>
+  
+  <rect x="36" y="138" width="248" height="3" rx="1.5" fill="#fff" fill-opacity="0.25"></rect>
+  <rect x="36" y="138" width="62" height="3" rx="1.5" fill="#FF7657"></rect>
+  <text x="36" y="172" font-family="Pretendard,sans-serif" font-size="11" fill="#fff" font-weight="700">평균 시청 지속률 +18%</text>
+  <text x="284" y="172" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#aab3c0" text-anchor="end">12:48</text>
+  
+  <rect x="14" y="14" width="44" height="22" rx="3" fill="#0B0D12"></rect>
+  <text x="36" y="30" font-family="ui-monospace,Menlo,monospace" font-size="11" font-weight="900" fill="#fff" text-anchor="middle">MP4</text>
+
+</svg>

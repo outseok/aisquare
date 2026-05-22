@@ -16,6 +16,9 @@ import { CartModule } from './cart/cart.module';
 import { FabricModule } from './fabric/fabric.module';
 import { PointsModule } from './points/points.module';
 import { WalletModule } from './wallet/wallet.module';
+import { PaymentsModule } from './payments/payments.module';
+import { NaverExchangeModule } from './naver-exchange/naver-exchange.module';
+import { NaverAdminModule } from './naver-admin/naver-admin.module';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { WalletModule } from './wallet/wallet.module';
     FabricModule,
     PointsModule,
     WalletModule,
+    PaymentsModule,
+    NaverExchangeModule,
+    NaverAdminModule,
   ],
 })
 export class AppModule {}

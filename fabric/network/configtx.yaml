@@ -14,27 +14,50 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer.example.com:7050
 
-  - &Org1
-    Name: Org1MSP
-    ID: Org1MSP
-    MSPDir: crypto-config/peerOrganizations/org1.example.com/msp
+  - &AISquare
+    Name: AISquareMSP
+    ID: AISquareMSP
+    MSPDir: crypto-config/peerOrganizations/aisquare.com/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('Org1MSP.admin', 'Org1MSP.peer', 'Org1MSP.client')"
+        Rule: "OR('AISquareMSP.admin','AISquareMSP.peer','AISquareMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('Org1MSP.admin', 'Org1MSP.client')"
+        Rule: "OR('AISquareMSP.admin','AISquareMSP.client')"
       Admins:
         Type: Signature
-        Rule: "OR('Org1MSP.admin')"
+        Rule: "OR('AISquareMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('Org1MSP.peer')"
+        Rule: "OR('AISquareMSP.peer')"
     AnchorPeers:
-      - Host: peer0.org1.example.com
+      - Host: peer0.aisquare.com
         Port: 7051
+
+  - &NaverPay
+    Name: NaverPayMSP
+    ID: NaverPayMSP
+    MSPDir: crypto-config/peerOrganizations/naverpay.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('NaverPayMSP.admin','NaverPayMSP.peer','NaverPayMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('NaverPayMSP.admin','NaverPayMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('NaverPayMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('NaverPayMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.naverpay.com
+        Port: 8051
 
 Capabilities:
   Channel: &ChannelCapabilities
@@ -112,21 +135,37 @@ Channel: &ChannelDefaults
     <<: *ChannelCapabilities
 
 Profiles:
-  RecodeAIGenesis:
+  # ────────────────────────────────────────────────────────
+  # internal-channel: AISquare 단독 (Square wallet, ACTIVITY 포인트, 에스크로)
+  # ────────────────────────────────────────────────────────
+  InternalGenesis:
     <<: *ChannelDefaults
     Orderer:
       <<: *OrdererDefaults
       Organizations:
         - *OrdererOrg
-    Consortiums:
-      RecodeConsortium:
-        Organizations:
-          - *Org1
-
-  RecodeChannel:
-    Consortium: RecodeConsortium
-    <<: *ChannelDefaults
+      Capabilities:
+        <<: *OrdererCapabilities
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *Org1
+        - *AISquare
+    Consortium: RecodeConsortium
+
+  # ────────────────────────────────────────────────────────
+  # naver-channel: AISquare + NaverPay (PAID 포인트 전환 원장)
+  # ────────────────────────────────────────────────────────
+  NaverChannelGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *AISquare
+        - *NaverPay
+    Consortium: RecodeConsortium

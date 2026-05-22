@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TokenLogType } from '@prisma/client';
+import { TokenLogType } from '../common/prisma-enums';
 
 const MAX_TOKEN = 100;
 const MIN_TOKEN = 0;

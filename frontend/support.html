@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>고객 지원 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+          if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .info-section { padding: 56px 0 96px; }
+      .info-head { margin-bottom: 36px; }
+      .info-head h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.4px; }
+      .info-head p { margin: 0; color: #677181; font-size: 15px; }
+      .info-tabs { display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: #efeff1; margin-bottom: 32px; width: fit-content; }
+      .info-tabs a { padding: 10px 22px; border-radius: 999px; font-weight: 800; font-size: 14.5px; color: var(--kmong-text); transition: background 0.15s ease, color 0.15s ease; }
+      .info-tabs a:hover:not(.is-active) { background: rgba(0, 0, 0, 0.04); }
+      .info-tabs a.is-active { background: #050505; color: #fff; }
+
+      .info-grid { display: grid; grid-template-columns: 240px 1fr; gap: 36px; align-items: flex-start; }
+      .info-side { background: #f8f9fb; border-radius: 14px; padding: 22px 24px; }
+      .info-side h3 { margin: 0 0 12px; font-size: 14px; color: #1f2a38; }
+      .info-side p { margin: 0; color: #3f4a59; font-size: 13.5px; line-height: 1.7; }
+      .info-side a { display: inline-block; margin-top: 16px; padding: 10px 16px; background: #050505; color: #fff; border-radius: 8px; font-weight: 800; font-size: 13.5px; }
+      .info-side a:hover { background: #1F3AE0; }
+
+      .info-content { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 36px 40px; }
+      .info-content h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: -0.2px; }
+      .info-content > p { margin: 0 0 28px; color: #677181; font-size: 14.5px; }
+
+      .faq-list { display: flex; flex-direction: column; gap: 10px; }
+      .faq-item { border: 1px solid #ececf0; border-radius: 12px; padding: 18px 22px; background: #fff; transition: border-color 0.15s ease, background 0.15s ease; }
+      .faq-item[open] { border-color: #1F3AE0; background: #fcfcff; }
+      .faq-item summary { cursor: pointer; font-weight: 800; font-size: 15px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+      .faq-item summary::-webkit-details-marker { display: none; }
+      .faq-item summary::after { content: "+"; font-weight: 800; font-size: 20px; color: #87909d; transition: color 0.15s ease; }
+      .faq-item[open] summary::after { content: "−"; color: #1F3AE0; }
+      .faq-item p { margin: 12px 0 0; color: #3f4a59; font-size: 14px; line-height: 1.6; }
+
+      .notice-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid #ececf0; }
+      .notice-item { padding: 18px 0; border-bottom: 1px solid #ececf0; display: grid; grid-template-columns: 70px 1fr 90px; gap: 18px; align-items: center; }
+      .notice-item .tag { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #eef1ff; color: #1F3AE0; font-size: 12px; font-weight: 800; text-align: center; }
+      .notice-item .tag.urgent { background: #ffeded; color: #e74c3c; }
+      .notice-item .title { font-size: 14.5px; color: #1f2a38; font-weight: 700; }
+      .notice-item .date { color: #87909d; font-size: 13px; text-align: right; }
+
+      [data-panel] { display: none; }
+      [data-panel].is-active { display: block; }
+
+      @media (max-width: 960px) {
+        .info-grid { grid-template-columns: 1fr; }
+        .info-content { padding: 28px 24px; }
+      }
+    </style>
+  </head>
+  <body data-screen-label="AISquare Support">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./admin.html" class="hdr-admin" data-admin-only title="관리자 콘솔">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            관리자
+            <span class="pending-badge hidden" id="hdrAdminBadge"></span>
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="info-section">
+        <div class="kmong-wrap">
+          <div class="info-head">
+            <h1>고객 지원</h1>
+            <p>거래·계정·결제에 관한 문의를 도와드려요. 이메일로 연락 주시면 답변드리겠습니다.</p>
+          </div>
+
+          <div class="info-tabs" id="supTabs">
+            <a href="?tab=faq" data-tab="faq">자주 묻는 질문</a>
+            <a href="?tab=notice" data-tab="notice">공지사항</a>
+            <a href="?tab=report" data-tab="report">신고 안내</a>
+            <a href="?tab=settlement" data-tab="settlement">정산 안내</a>
+          </div>
+
+          <div class="info-grid">
+            <aside class="info-side">
+              <h3>문의하기</h3>
+              <p>아래 이메일로 연락 주시면 빠르게 답변드리겠습니다.</p>
+              <a href="mailto:support@aisquare.com">support@aisquare.com</a>
+            </aside>
+
+            <div class="info-content">
+              <div data-panel="faq" class="is-active">
+                <h2>자주 묻는 질문</h2>
+                <p>처음 거래하시는 분들이 가장 많이 궁금해하시는 내용을 모았어요.</p>
+                <div class="faq-list">
+                  <details class="faq-item"><summary>Square와 Point는 어떻게 다른가요?</summary><p>Square는 충전·결제·정산·거래 캐시백에 쓰이는 주 통화입니다. Point는 충전 보너스(0.1%)·리뷰·이벤트 보상 등으로 적립되는 보조 수단으로 결제 시 1 Point = 1원 할인에 사용할 수 있어요(출금 불가). 거래 캐시백 2%는 Square로 적립됩니다.</p></details>
+                  <details class="faq-item"><summary>구매한 자료가 마음에 들지 않으면 환불되나요?</summary><p>다운로드 직후 자료에 명백한 하자(파일 손상·복제물 등)가 있을 때만 환불됩니다. 단순 변심은 환불 대상이 아니에요.</p></details>
+                  <details class="faq-item"><summary>판매 수익은 언제 출금할 수 있나요?</summary><p>구매가 확정된 시점부터 지갑에 정산되며, 마이페이지 &gt; 지갑에서 출금 신청하면 영업일 1~2일 내 입금됩니다.</p></details>
+                  <details class="faq-item"><summary>한 계정으로 구매와 판매를 같이 할 수 있나요?</summary><p>네, 마이페이지에서 판매자 신청만 추가하시면 한 계정으로 모두 관리할 수 있어요.</p></details>
+                  <details class="faq-item"><summary>72시간 자동 확정이란 무엇인가요?</summary><p>구매 후 72시간 동안 확정하지 않으면 자동으로 확정 처리됩니다. 그동안 자료를 검수할 수 있는 시간이 보장돼요.</p></details>
+                </div>
+              </div>
+
+              <div data-panel="notice">
+                <h2>공지사항</h2>
+                <p>서비스 업데이트와 정책 변경 안내를 확인하세요.</p>
+                <div class="notice-list">
+                  <div class="notice-item"><span class="tag urgent">긴급</span><span class="title">정산 시스템 점검 안내 (5/22 02:00~04:00)</span><span class="date">2026.05.20</span></div>
+                  <div class="notice-item"><span class="tag">업데이트</span><span class="title">이용가이드 페이지 새로 오픈 — 구매·판매 단계별 안내</span><span class="date">2026.05.21</span></div>
+                  <div class="notice-item"><span class="tag">정책</span><span class="title">수수료 정책 변경 안내 — 판매자/구매자 각 5% 부담, 각 2% Square 캐시백</span><span class="date">2026.05.21</span></div>
+                  <div class="notice-item"><span class="tag">이벤트</span><span class="title">첫 구매 1,000 Point 지급 이벤트 진행 중</span><span class="date">2026.05.10</span></div>
+                  <div class="notice-item"><span class="tag">업데이트</span><span class="title">Hyperledger Fabric 거래 원장 v2 적용</span><span class="date">2026.05.01</span></div>
+                </div>
+              </div>
+
+              <div data-panel="report">
+                <h2>신고 안내</h2>
+                <p>저작권 침해, 부적절한 콘텐츠, 결제 분쟁 등을 신고하실 수 있어요.</p>
+                <div class="faq-list">
+                  <details class="faq-item" open><summary>신고는 어떻게 진행되나요?</summary><p>신고가 접수되면 24시간 내 운영팀이 검토합니다. 신고 대상 상품은 즉시 노출이 중단되며, 사실관계 확인 후 처리 결과를 안내드려요.</p></details>
+                  <details class="faq-item"><summary>저작권 침해 신고는 어떻게 하나요?</summary><p>상품 상세 페이지의 신고 버튼 또는 support@aisquare.com 으로 침해 증빙(원본 자료, 권리 증명)과 함께 접수해 주세요.</p></details>
+                  <details class="faq-item"><summary>허위 리뷰 신고는 가능한가요?</summary><p>판매자가 자작극으로 작성한 리뷰가 의심되면 신고해 주세요. AISquare는 Hyperledger 원장으로 거래 이력을 검증할 수 있습니다.</p></details>
+                </div>
+              </div>
+
+              <div data-panel="settlement">
+                <h2>정산 안내</h2>
+                <p>판매자 정산 정책과 출금 절차를 안내드려요.</p>
+                <div class="faq-list">
+                  <details class="faq-item" open><summary>판매 수수료와 결제 금액은 어떻게 되나요?</summary><p>판매자는 표시 가격의 5%를 수수료로 부담(정산 95%)하고, 별도로 거래액의 2%가 Square 캐시백으로 적립됩니다. 구매자는 표시 가격 위에 5%를 더 결제(가격×1.05)하고, 마찬가지로 2%가 Square 캐시백으로 적립됩니다. 예) 10,000 Square 상품 → 판매자 9,500 정산 + 200 Square 캐시백, 구매자 10,500 결제 + 200 Square 캐시백, 플랫폼 600 Square.</p></details>
+                  <details class="faq-item"><summary>언제부터 출금할 수 있나요?</summary><p>구매가 확정된 시점부터 출금 가능합니다. 72시간 자동 확정 후 즉시 지갑에 반영돼요.</p></details>
+                  <details class="faq-item"><summary>출금 영업일은?</summary><p>영업일 기준 1~2일 이내 등록 계좌로 입금됩니다. 주말·공휴일은 다음 영업일에 처리됩니다.</p></details>
+                  <details class="faq-item"><summary>최소 출금 금액이 있나요?</summary><p>10,000 Square 이상부터 출금 신청 가능합니다.</p></details>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
+    <script>
+      (function() {
+        var tabs = document.querySelectorAll('#supTabs a');
+        var panels = document.querySelectorAll('[data-panel]');
+        var qs = new URLSearchParams(location.search);
+        var active = qs.get('tab') || 'faq';
+        tabs.forEach(function(a) {
+          var on = a.getAttribute('data-tab') === active;
+          a.classList.toggle('is-active', on);
+        });
+        panels.forEach(function(p) {
+          p.classList.toggle('is-active', p.getAttribute('data-panel') === active);
+        });
+      })();
+    </script>
+  </body>
+</html>

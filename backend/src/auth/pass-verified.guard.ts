@@ -3,6 +3,10 @@ import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@
 @Injectable()
 export class PassVerifiedGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
+    // Dev escape hatch: SKIP_PASS_VERIFICATION=1 lets unverified users
+    // exercise the payment flow during local testing.
+    if (process.env.SKIP_PASS_VERIFICATION === '1') return true;
+
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     if (!user?.phoneVerified) {

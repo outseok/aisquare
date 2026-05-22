@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PointsController } from './points.controller';
 import { PointsService } from './points.service';
+import { FabricModule } from '../fabric/fabric.module';
 
 @Module({
+  imports: [FabricModule],
   controllers: [PointsController],
   providers: [PointsService],
   exports: [PointsService],

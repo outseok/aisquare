@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>마켓 — AISquare</title>
+    <link rel="stylesheet" href="./styles.css?v=20260524c" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('aisquare-mock-store-v2');
+          var u = s && JSON.parse(s).user;
+          if (u) document.documentElement.classList.add('aisq-loggedin');
+          if (u && u.isAdmin) document.documentElement.classList.add('aisq-admin');
+          if (!u) return;
+          var TONES = ['#1F3AE0','#0B0D12','#1F8A5B','#B8730F','#4F2BE8','#C8331F'];
+          function paint() {
+            var nm = document.getElementById('hdrName');
+            var av = document.getElementById('hdrAvatar');
+            if (!nm && !av) return false;
+            var name = (u.nickname || u.name || u.username || '').toString();
+            var init = (name || 'U').trim().slice(0,1).toUpperCase();
+            var seed = (u.username || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0);
+            if (nm) nm.textContent = name;
+            if (av) {
+              av.textContent = init;
+              av.style.background = TONES[seed % TONES.length];
+            }
+            return true;
+          }
+          if (paint()) return;
+          // Element not yet parsed — observe & paint the moment it appears
+          var mo = new MutationObserver(function () { if (paint()) mo.disconnect(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+          // Safety cap (DOMContentLoaded is last resort)
+          document.addEventListener('DOMContentLoaded', function () { paint(); mo.disconnect(); });
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body data-screen-label="AISquare Market">
+    <header class="answer-header">
+      <div class="answer-wrap">
+        <a class="answer-logo" href="./index.html" aria-label="AISquare 홈">
+          <object data="./assets/aisquare_animated_logo.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </a>
+        <nav class="answer-tabs" aria-label="answer menu" id="answerTabs">
+          <a href="./index.html" data-tab="home">홈</a>
+          <a class="active" href="./market.html" data-tab="market">마켓</a>
+          <a href="./ranking.html" data-tab="ranking">랭킹</a>
+          <a href="./guide.html" data-tab="guide">이용가이드</a>
+        </nav>
+        <div class="answer-actions" aria-label="answer actions">
+          <button type="button" class="hdr-icon" aria-label="검색" id="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <a href="./mypage.html?tab=wishlist" class="hdr-icon" aria-label="찜" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </a>
+          <a href="./mypage.html?tab=cart" class="hdr-icon" aria-label="장바구니" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.2" fill="currentColor"/><circle cx="18" cy="21" r="1.2" fill="currentColor"/><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+          </a>
+          <a href="./sell.html" class="hdr-sell" data-auth-only data-admin-hide>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            상품 등록
+          </a>
+          <a href="./admin.html" class="hdr-admin" data-admin-only title="관리자 콘솔">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            관리자
+            <span class="pending-badge hidden" id="hdrAdminBadge"></span>
+          </a>
+          <a href="./mypage.html" class="hdr-user" data-auth-only id="hdrUserChip">
+            <span class="avatar" id="hdrAvatar"></span>
+            <span class="name" id="hdrName"></span>
+          </a>
+          <a href="./login.html" class="hdr-login" data-anon-only>로그인</a>
+          <a href="./register.html" class="hdr-signup" data-anon-only>회원가입</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="market-section">
+        <div class="market-hero">
+          <div class="kmong-wrap">
+            <span class="eyebrow">MARKETPLACE · WEB3 LEDGER</span>
+            <h1>검증된 AI 노하우를<br /><mark>한 곳에서</mark> 비교하고 거래</h1>
+            <p>프롬프트·자동화 시트·실전 강의를 Square로 안전하게. 72시간 자동 확정으로 보호받는 거래.</p>
+            <div class="market-stats">
+              <div class="market-stat"><span class="lbl">총 노하우</span><span class="val" id="statTotal">—<em>건</em></span></div>
+              <div class="market-stat"><span class="lbl">평균 평점</span><span class="val" id="statRating">—<em>점</em></span></div>
+              <div class="market-stat"><span class="lbl">이번 주 거래</span><span class="val" id="statTrades">—<em>건</em></span></div>
+              <div class="market-stat"><span class="lbl">활동 판매자</span><span class="val" id="statSellers">—<em>명</em></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-nav">
+          <div class="kmong-wrap">
+            <div class="inner" id="categoryNav">
+              <button class="category-chip is-active" data-cat="all">전체</button>
+              <button class="category-chip" data-cat="marketer">마케팅</button>
+              <button class="category-chip" data-cat="creator">콘텐츠</button>
+              <button class="category-chip" data-cat="dev">개발</button>
+              <button class="category-chip" data-cat="prompt">프롬프트</button>
+              <button class="category-chip" data-cat="automation">자동화</button>
+              <button class="category-chip" data-cat="seo">SEO</button>
+              <button class="category-chip" data-cat="claude">Claude</button>
+              <button class="category-chip" data-cat="gpt-5">GPT-5</button>
+              <button class="category-chip" data-cat="midjourney">Midjourney</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="kmong-wrap">
+          <div class="market-block">
+            <h2><mark>이번 주</mark> 추천 노하우</h2>
+            <p class="sub">평점·리뷰·구매 확정률로 선별된 7개의 노하우입니다.</p>
+            <div class="product-grid" id="featuredGrid"></div>
+          </div>
+
+          <div class="market-head">
+            <div>
+              <h2>전체 노하우</h2>
+              <p class="sub" style="margin:4px 0 0;color:#677181;font-size:13px"><span id="marketCount">12</span>개 노하우를 비교해보세요.</p>
+            </div>
+            <div></div>
+          </div>
+
+          <div class="market-search-row">
+            <label class="market-search">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="marketQ" type="search" placeholder="프롬프트·모델명·판매자를 검색해보세요" autocomplete="off" />
+            </label>
+            <button type="button" class="market-sort" id="sortBtn" data-sort="latest">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+              <span id="sortLabel">최신순</span>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+
+          <div class="filter-row" id="filterRow"></div>
+
+          <div class="product-grid" id="productGrid"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="kmong-footer">
+      <div class="kmong-wrap">
+        <div class="footer-bottom">
+          <object class="kmong-logo" data="./assets/aisquare_logo_static.svg?v=20260524b" type="image/svg+xml" aria-label="AISquare" tabindex="-1"></object>
+        </div>
+        <p class="company muted">Copyright © 2026 AISquare Inc. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./api.js?v=20260524a"></script>
+    <script src="./app.js?v=20260524a"></script>
+  </body>
+</html>

@@ -13,13 +13,16 @@ import { QueryProductDto } from './dto/query-product.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PassVerifiedGuard } from '../auth/pass-verified.guard';
 import { FilesService } from '../files/files.service';
-import { FileType } from '@prisma/client';
+import { FileType } from '../common/prisma-enums';
 
 const FILE_TYPE_MAP: Record<string, FileType> = {
   'application/pdf': 'PDF',
   'image/jpeg': 'JPG',
   'image/png': 'PNG',
   'video/mp4': 'MP4',
+  'text/plain': 'TXT',
+  'application/zip': 'ZIP',
+  'application/x-zip-compressed': 'ZIP',
 };
 
 @ApiTags('products')
@@ -34,6 +37,12 @@ export class ProductsController {
   @ApiOperation({ summary: '상품 목록 조회 (비회원 가능)' })
   findAll(@Query() query: QueryProductDto) {
     return this.productsService.findAll(query);
+  }
+
+  @Get('sellers/ranking')
+  @ApiOperation({ summary: '판매자 랭킹 (별점·판매수·신뢰토큰 기준)' })
+  getSellersRanking(@Query('limit') limit?: string) {
+    return this.productsService.getSellersRanking(limit ? Number(limit) : 50);
   }
 
   @Get(':id')

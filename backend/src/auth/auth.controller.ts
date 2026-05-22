@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Patch, Delete, Body, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -6,11 +6,18 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyPhoneDto } from './dto/verify-phone.dto';
 import { UpdateBioDto } from './dto/update-bio.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Get('imp-config')
+  @ApiOperation({ summary: 'PortOne 가맹점 식별코드 (프론트엔드 SDK init용)' })
+  getImpConfig() {
+    return { impCode: process.env.IMP_CODE || null };
+  }
 
   @Post('register')
   @ApiOperation({ summary: '회원가입' })
@@ -50,6 +57,14 @@ export class AuthController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @ApiOperation({ summary: '프로필 수정 (닉네임/이메일, 본인만)' })
+  updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.id, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get('me/tokens')
   @ApiOperation({ summary: '신뢰 토큰 변동 내역' })
   getTokenHistory(@Request() req) {
@@ -62,5 +77,21 @@ export class AuthController {
   @ApiOperation({ summary: '포인트 변동 내역' })
   getPointHistory(@Request() req) {
     return this.authService.getPointHistory(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('pass')
+  @ApiOperation({ summary: 'PASS 본인인증 해제' })
+  revokePass(@Request() req) {
+    return this.authService.revokePass(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  @ApiOperation({ summary: '회원 탈퇴 (계정 + 모든 관련 데이터 영구 삭제)' })
+  deleteAccount(@Request() req) {
+    return this.authService.deleteAccount(req.user.id);
   }
 }
