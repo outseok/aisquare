@@ -101,12 +101,24 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
     const grpc = await import('@grpc/grpc-js' as any);
 
     const peerEndpoint = process.env.FABRIC_NAVER_PEER_ENDPOINT || 'localhost:8051';
+    // NaverPay 경로 자동 유추: AISquare 경로에서 'aisquare' → 'naverpay'로 치환
+    // (FABRIC_TLS_CERT_PATH가 .../aisquare.com/... 이면 NaverPay 짝이 같은 디렉토리에 존재)
+    const inferFromAis = (p: string | undefined, replace: string): string | undefined =>
+      p ? p
+            .replace(/aisquare\.com/g, 'naverpay.com')
+            .replace(/Admin@aisquare\.com/g, 'Admin@naverpay.com')
+            .replace(/peer0\.aisquare\.com/g, 'peer0.naverpay.com')
+            .replace(/tls\/ca\.crt$/, replace)
+        : undefined;
+    const inferredBase = process.env.FABRIC_TLS_CERT_PATH?.replace(/aisquare\.com/g, 'naverpay.com').replace(/peer0\.aisquare\.com/g, 'peer0.naverpay.com');
     const tlsCertPath = process.env.FABRIC_NAVER_TLS_CERT_PATH
-      || '/root/aisquare/fabric/network/crypto-config/peerOrganizations/naverpay.com/peers/peer0.naverpay.com/tls/ca.crt';
+      || inferredBase
+      || '/tmp/missing-naver-tls.crt';
+    const naverRoot = tlsCertPath.replace(/peers\/peer0\.naverpay\.com\/tls\/ca\.crt$/, '');
     const certPath = process.env.FABRIC_NAVER_CERT_PATH
-      || '/root/aisquare/fabric/network/crypto-config/peerOrganizations/naverpay.com/users/Admin@naverpay.com/msp/signcerts/Admin@naverpay.com-cert.pem';
+      || `${naverRoot}users/Admin@naverpay.com/msp/signcerts/Admin@naverpay.com-cert.pem`;
     const keystoreDir = process.env.FABRIC_NAVER_KEYSTORE_DIR
-      || '/root/aisquare/fabric/network/crypto-config/peerOrganizations/naverpay.com/users/Admin@naverpay.com/msp/keystore';
+      || `${naverRoot}users/Admin@naverpay.com/msp/keystore`;
     const tlsHost = process.env.FABRIC_NAVER_PEER_TLS_HOST || 'peer0.naverpay.com';
     const mspId = process.env.FABRIC_NAVER_MSP_ID || 'NaverPayMSP';
 

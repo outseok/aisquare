@@ -61,19 +61,21 @@ export class ProductsService {
   }
 
   async findAll(query: QueryProductDto) {
-    const { search, fileType, sort, page, limit } = query;
+    const { search, fileType, sort, page, limit, includeSold, sellerUsername } = query;
     const skip = ((page || 1) - 1) * (limit || 20);
 
+    // 기본: ON_SALE만 (마켓·홈에서 SOLD 숨김).
+    // includeSold=1 또는 sellerUsername 지정 시(판매자 페이지)엔 SOLD도 포함.
+    const showSold = includeSold === '1' || includeSold === 'true' || !!sellerUsername;
     const where: Prisma.ProductWhereInput = {
       isVisible: true,
-      // SOLD도 포함 — 마켓 카드 회색조 + 판매자 페이지에서 리뷰 표시. 실제 구매 차단은 order create 단에서.
-      status: { in: ['ON_SALE', 'SOLD'] },
+      status: { in: showSold ? ['ON_SALE', 'SOLD'] : ['ON_SALE'] },
       ...(fileType && { fileType }),
+      ...(sellerUsername && { seller: { is: { username: sellerUsername } } }),
       ...(search && {
         OR: [
           { title: { contains: search } },
           { description: { contains: search } },
-          // tags 는 JSON 컬럼 — MySQL의 JSON LIKE는 따옴표 포함 매칭이라 search 문구를 JSON 부분 일치로
           { tags: { string_contains: search } as any },
           { seller: { is: { OR: [
             { name: { contains: search } },

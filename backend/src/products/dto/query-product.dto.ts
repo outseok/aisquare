@@ -38,4 +38,14 @@ export class QueryProductDto {
   @IsInt()
   @Min(1)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'SOLD 상품도 포함 (판매자 페이지 전용)' })
+  @IsOptional()
+  @IsString()
+  includeSold?: string;
+
+  @ApiPropertyOptional({ description: '특정 판매자(username)의 상품만' })
+  @IsOptional()
+  @IsString()
+  sellerUsername?: string;
 }

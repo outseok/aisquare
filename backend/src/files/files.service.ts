@@ -13,6 +13,7 @@ const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
+  'image/webp',
   'video/mp4',
   'text/plain',
   'application/zip',
@@ -130,10 +131,6 @@ export class FilesService {
   }
 
   async getPresignedDownloadUrl(key: string, expiresIn = 300): Promise<string> {
-    // CloudFront Presigned URL 우선 사용, 설정 없으면 S3 Presigned URL fallback
-    if (this.cfDomain && this.cfKeyPairId && this.cfPrivateKey) {
-      return this.getCloudFrontSignedUrl(key, expiresIn);
-    }
     return this.getS3PresignedUrl(key, expiresIn);
   }
 

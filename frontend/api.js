@@ -10,8 +10,13 @@
  *   localStorage.setItem('aisquare-api-mode', 'mock')   // forced mock (default)
  */
 (function () {
-  // BE: NestJS @ http://localhost:3000 (no /api prefix — controllers mount at root)
-  const API_BASE = (window.AISQUARE_API_BASE) || 'http://localhost:3000';
+  // API_BASE 결정:
+  //   1) window.AISQUARE_API_BASE 명시값이 있으면 그 값 사용
+  //   2) localhost:8000 (정적 dev 서버) → http://localhost:3000 (별도 BE)
+  //   3) 그 외(BE가 직접 서빙·터널·프로덕션) → same-origin ('')
+  const API_BASE = (typeof window.AISQUARE_API_BASE === 'string')
+    ? window.AISQUARE_API_BASE
+    : (location.port === '8000' ? 'http://localhost:3000' : '');
   // Force live mode by default. The old localStorage value
   // ('aisquare-api-mode') from the mock-only era is now ignored unless
   // explicitly set to 'mock-force'.
@@ -367,15 +372,20 @@
   function adaptOrders(rows) {
     return (rows || []).map(o => ({
       id: o.id,
+      rawStatus: o.status,
       status: o.status === 'PENDING_CONFIRMATION' ? 'PENDING' : (o.status || 'PENDING'),
       productTitle: o.product?.title || o.productTitle || '',
       productId: o.productId,
       sellerName: o.product?.seller?.name || o.product?.seller?.username || o.sellerName || '',
+      buyerName: o.buyer?.name || o.buyer?.username || o.buyerName || '',
       paymentMethod: o.paymentMethod,
       paymentAmount: o.paymentAmount,
+      usedPoint: o.usedPoint || 0,
       createdAt: o.createdAt,
       autoConfirmAt: o.autoConfirmAt,
       hasReview: !!o.review,
+      hasReport: Array.isArray(o.reports) && o.reports.length > 0,
+      reportStatus: Array.isArray(o.reports) && o.reports[0] ? o.reports[0].status : null,
     }));
   }
   const orders = {
@@ -600,10 +610,14 @@
   const payments = {
     tossConfig:           dispatch(()                 => http('GET',  '/payments/toss/config'),
                                    async () => mock({ clientKey: 'mock_test_client_key' })),
-    requestProductPay:    dispatch((productId)        => http('POST', '/payments/toss/product/request', { productId }),
+    requestProductPay:    dispatch((productId, usedPoint) => http('POST', '/payments/toss/product/request', { productId, usedPoint: usedPoint || 0 }),
                                    async (productId) => mock({ tossOrderId: 'mock-order-' + Date.now(), amountKrw: 5500, orderName: 'mock 결제' })),
     confirmProductPay:    dispatch((paymentKey, orderId, amount) => http('POST', '/payments/toss/product/confirm', { paymentKey, orderId, amount }),
                                    async () => mock({ ok: true })),
+    requestCartPay:       dispatch((productIds, usedPoint) => http('POST', '/payments/toss/cart/request', { productIds, usedPoint: usedPoint || 0 }),
+                                   async (productIds) => mock({ tossOrderId: 'mock-cart-' + Date.now(), amountKrw: 11000, orderName: '장바구니 결제', count: productIds.length })),
+    confirmCartPay:       dispatch((paymentKey, orderId, amount) => http('POST', '/payments/toss/cart/confirm', { paymentKey, orderId, amount }),
+                                   async () => mock({ ok: true, count: 0 })),
     requestRpCharge:      dispatch((amount)           => http('POST', '/payments/toss/charge/request', { amount }),
                                    async (amount) => mock({ tossOrderId: 'mock-rp-' + Date.now(), amountKrw: amount * 11, rpAmount: amount, orderName: `RP 충전 ${amount}` })),
     confirmRpCharge:      dispatch((paymentKey, orderId, amount) => http('POST', '/payments/toss/charge/confirm', { paymentKey, orderId, amount }),

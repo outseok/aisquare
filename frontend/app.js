@@ -541,7 +541,7 @@ function productCard(p) {
   const badge = p.badge || (isSold ? '판매 완료' : null);
   return `<article class="pcard${isSold ? ' is-sold' : ''}" data-id="${esc(p.id)}" data-title="${esc(p.title)}">
     <div class="cover">
-      <img src="${esc(coverSrc(p))}" alt="" />
+      <img src="${esc(coverSrc(p))}" alt="" onerror="this.onerror=null;this.src='./assets/cover-01.svg'" />
       ${badge ? `<span class="badge ${isSold ? 'sold' : badge.toLowerCase()}">${esc(badge)}</span>` : ""}
     </div>
     <h4>${esc(p.title)}</h4>
@@ -1321,7 +1321,7 @@ async function renderWallet(root, api, showToast) {
     FAILED:    { label: '전환 실패',        bg: '#ffe3d6', fg: '#c8331f' },
   };
 
-  // 외부 연동 탭 상태 (refresh를 거쳐도 유지) — YR 디폴트(가져오기)
+  // 포인트 전환 탭 상태 (refresh를 거쳐도 유지) — YR 디폴트(가져오기)
   let exState = { partnerId: 'naver', direction: 'in', amountRaw: '' };
 
   let active = "square";
@@ -1352,7 +1352,7 @@ async function renderWallet(root, api, showToast) {
 
     root.innerHTML = `
       <h2>지갑 관리</h2>
-      <p class="sub">Square 지갑은 구매·판매 결제용, Point 지갑은 할인 적립용, 외부 연동은 파트너 포인트 전환입니다.</p>
+      <p class="sub">Square는 구매·판매 결제용, Point는 사이트 할인 적립용, 포인트 전환은 NaverPay 등 외부 파트너와의 포인트 교환입니다.</p>
 
       ${walletTabsHtml()}
 
@@ -1373,7 +1373,7 @@ async function renderWallet(root, api, showToast) {
       <div class="wallet-info">
         ${isSquare
           ? `• 결제 시 <b>1 Square = 1원</b><br>• 충전 시 <b>1,000 Square = 1,100원</b> (수수료 10% 포함)<br>• 거래 시 판매자 5% / 구매자 5% 부담 (양쪽 <b>2% Square 캐시백</b> 적립)`
-          : `• <b>리뷰 작성</b> 시 +100 Point (ACTIVITY)<br>• <b>이벤트 보상</b> (ACTIVITY)<br>• ACTIVITY 포인트는 <b>출금·외부 전환 불가</b> · 사이트 내 결제 할인 전용<br>• 충전·구매 캐시백(PAID)은 <b>외부 연동 탭</b>에서 확인·전환`}
+          : `• <b>리뷰 작성</b> 시 +100 Point (ACTIVITY)<br>• <b>이벤트 보상</b> (ACTIVITY)<br>• ACTIVITY 포인트는 <b>출금·외부 전환 불가</b> · 사이트 내 결제 할인 전용<br>• 충전·구매 캐시백(PAID)은 <b>포인트 전환 탭</b>에서 확인·전환`}
       </div>
 
       <h3 style="margin:0 0 12px;font-size:15px;font-weight:800;color:#677181">${isSquare ? "거래 내역" : "ACTIVITY 적립 내역"}</h3>
@@ -1399,7 +1399,7 @@ async function renderWallet(root, api, showToast) {
       <div class="wallet-tabs">
         <button class="wallet-tab ${active==='square'   ? 'is-active' : ''}" data-w="square">${ICON.wallet} Square Wallet</button>
         <button class="wallet-tab ${active==='point'    ? 'is-active' : ''}" data-w="point">${ICON.coins} Point Wallet</button>
-        <button class="wallet-tab ${active==='exchange' ? 'is-active' : ''}" data-w="exchange">${ICON.arrowIn || ''} 외부 연동</button>
+        <button class="wallet-tab ${active==='exchange' ? 'is-active' : ''}" data-w="exchange">${ICON.arrowIn || ''} 포인트 전환</button>
       </div>`;
   }
   function wireTabs() {
@@ -1454,7 +1454,7 @@ async function renderWallet(root, api, showToast) {
 
     root.innerHTML = `
       <h2>지갑 관리</h2>
-      <p class="sub">Square 지갑은 구매·판매 결제용, Point 지갑은 할인 적립용, 외부 연동은 파트너 포인트 전환입니다.</p>
+      <p class="sub">Square는 구매·판매 결제용, Point는 사이트 할인 적립용, 포인트 전환은 NaverPay 등 외부 파트너와의 포인트 교환입니다.</p>
 
       ${walletTabsHtml()}
 
@@ -1926,6 +1926,8 @@ async function renderOrders(root, api, showToast, kind) {
       ? `<div class="empty-state"><strong>${isPurchase ? "구매 내역이 없습니다" : "판매 내역이 없습니다"}</strong><span>${isPurchase ? "마켓에서 원하는 노하우를 찾아보세요." : "판매 등록 후 첫 거래를 기다려보세요."}</span></div>`
       : items.map(o => {
           const st = STATUS[o.status] || { label: o.status, cls: "gray" };
+          const canReport = isPurchase && o.status === "PENDING" && !o.hasReport;
+          const reportReceived = isPurchase && (o.hasReport || o.status === "SETTLEMENT_HOLD");
           // 72h 카운트다운 (autoConfirmAt 기준)
           let timerHtml = '';
           if (isPurchase && o.status === 'PENDING' && o.autoConfirmAt) {
@@ -1966,46 +1968,48 @@ async function renderOrders(root, api, showToast, kind) {
               ${refundNote}
             </div>
             <div class="actions">
-              ${isPurchase ? `<button class="btn-ghost" data-act="download" data-id="${esc(o.id)}">${ICON.download} 다운로드</button>` : ""}
-              ${isPurchase && o.status === "PENDING" ? `<button class="btn-ink" data-act="confirm" data-id="${esc(o.id)}">${ICON.check} 구매 확정</button>` : ""}
-              ${isPurchase && o.status === "CONFIRMED" && !o.hasReview ? `<button class="btn-ink" data-act="review" data-id="${esc(o.id)}">${ICON.pen} 리뷰 작성</button>` : ""}
-              ${isPurchase && o.status === "PENDING" ? `<button class="btn-danger" data-act="report" data-id="${esc(o.id)}">${ICON.alert} 신고</button>` : ""}
+              ${isPurchase ? `<button type="button" class="btn-ghost" data-order-act="download" data-id="${esc(o.id)}">${ICON.download} 다운로드</button>` : ""}
+              ${isPurchase && o.status === "PENDING" ? `<button type="button" class="btn-ink" data-order-act="confirm" data-id="${esc(o.id)}">${ICON.check} 구매 확정</button>` : ""}
+              ${isPurchase && o.status === "CONFIRMED" && !o.hasReview ? `<button type="button" class="btn-ink" data-order-act="review" data-id="${esc(o.id)}">${ICON.pen} 리뷰 작성</button>` : ""}
+              ${canReport ? `<button type="button" class="btn-danger" data-order-act="report" data-id="${esc(o.id)}">${ICON.alert} 신고</button>` : ""}
+              ${reportReceived ? `<button type="button" class="btn-danger" disabled>${ICON.alert} 신고 접수됨</button>` : ""}
             </div>
           </div>`;
         }).join("")
     }
   `;
 
-  root.querySelectorAll("[data-act]").forEach(b => {
-    b.addEventListener("click", async () => {
-      const id = b.dataset.id;
-      const act = b.dataset.act;
+  root.onclick = async (e) => {
+    const b = e.target.closest('[data-order-act]');
+    if (!b || !root.contains(b) || b.disabled) return;
+    e.preventDefault();
+    const id = b.dataset.id;
+    const act = b.dataset.orderAct;
+    try {
       if (act === "download") {
-        try {
-          // BE 스트림 엔드포인트 — 모든 확장자에서 강제 다운로드 (CloudFront cross-origin 우회)
-          const res = await fetch(api.API_BASE + `/orders/${id}/download/file`, {
-            headers: { Authorization: 'Bearer ' + api.getJwt() },
-          });
-          if (!res.ok) {
-            let msg = '다운로드 실패';
-            try { const j = await res.json(); msg = j.message || msg; } catch {}
-            throw new Error(msg);
-          }
-          // Content-Disposition에서 파일명 추출 (RFC 5987 우선)
-          const cd = res.headers.get('content-disposition') || '';
-          let filename = 'download';
-          const m87 = cd.match(/filename\*=UTF-8''([^;]+)/i);
-          const m   = cd.match(/filename="([^"]+)"/i);
-          if (m87) { try { filename = decodeURIComponent(m87[1]); } catch { filename = m87[1]; } }
-          else if (m) { try { filename = decodeURIComponent(m[1]); } catch { filename = m[1]; } }
-          const blob = await res.blob();
-          const objUrl = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = objUrl; a.download = filename;
-          document.body.appendChild(a); a.click(); a.remove();
-          setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
-          showToast(`다운로드 완료: ${filename}`);
-        } catch (e) { showToast(e.message || "다운로드 실패"); }
+        // BE 스트림 엔드포인트 — 모든 확장자에서 강제 다운로드 (CloudFront cross-origin 우회)
+        const res = await fetch(api.API_BASE + `/orders/${id}/download/file`, {
+          headers: { Authorization: 'Bearer ' + api.getJwt() },
+        });
+        if (!res.ok) {
+          let msg = '다운로드 실패';
+          try { const j = await res.json(); msg = j.message || msg; } catch {}
+          throw new Error(msg);
+        }
+        // Content-Disposition에서 파일명 추출 (RFC 5987 우선)
+        const cd = res.headers.get('content-disposition') || '';
+        let filename = 'download';
+        const m87 = cd.match(/filename\*=UTF-8''([^;]+)/i);
+        const m   = cd.match(/filename="([^"]+)"/i);
+        if (m87) { try { filename = decodeURIComponent(m87[1]); } catch { filename = m87[1]; } }
+        else if (m) { try { filename = decodeURIComponent(m[1]); } catch { filename = m[1]; } }
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
+        showToast(`다운로드 완료: ${filename}`);
         return;
       }
       if (act === "confirm")  { await api.orders.confirm(id); showToast("구매가 확정되었습니다. 판매자에게 정산됩니다."); renderOrders(root, api, showToast, kind); return; }
@@ -2015,11 +2019,15 @@ async function renderOrders(root, api, showToast, kind) {
       }
       if (act === "report")   {
         const order = items.find(o => o.id === id);
+        if (!order) throw new Error('주문 정보를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
         openReportModal(id, order, api, showToast, () => renderOrders(root, api, showToast, kind));
         return;
       }
-    });
-  });
+    } catch (err) {
+      console.error('order action failed', err);
+      showToast(err.message || '처리 중 오류가 발생했습니다.');
+    }
+  };
 
   // 72h 카운트다운 매초 갱신
   const timers = root.querySelectorAll('.auto-confirm-timer');
@@ -2343,8 +2351,6 @@ async function renderCart(root, api, showToast) {
     await api.cart.remove(b.dataset.id); showToast("삭제했습니다."); renderCart(root, api, showToast);
   }));
   document.getElementById("checkoutBtn")?.addEventListener("click", async () => {
-    const btn = document.getElementById("checkoutBtn");
-
     // PASS 본인인증 확인
     let me;
     try { me = await api.user.getMe(); } catch { me = api.getCurrentUser(); }
@@ -2354,7 +2360,12 @@ async function renderCart(root, api, showToast) {
       return;
     }
 
-    // Square 잔액 확인
+    // 단일 상품 "바로 구매"와 동일하게 checkout.html로 이동 (cart 모드)
+    location.href = "./checkout.html?cart=1";
+    return;
+
+    // — 아래 옛 인라인 결제 로직은 보류 (checkout.html로 이관됨) —
+    const btn = document.getElementById("checkoutBtn");
     let squareBal = 0;
     try { squareBal = (await api.square.getBalance())?.balance || 0; } catch {}
 

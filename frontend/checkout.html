@@ -164,13 +164,14 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=20260524a"></script>
-    <script src="./app.js?v=20260524a"></script>
+    <script src="./api.js?v=1779445200"></script>
+    <script src="./app.js?v=1779445200"></script>
     <script>
       (async function() {
         var api = window.AISquareAPI;
         var qs = new URLSearchParams(location.search);
         var productId = qs.get('id');
+        var isCart = qs.get('cart') === '1';
         var root = document.getElementById('coRoot');
         var t = function(m){ (window.showToast || alert)(m); };
 
@@ -178,19 +179,39 @@
           location.href = './login.html?redirect=checkout';
           return;
         }
-        if (!productId) {
+        if (!productId && !isCart) {
           root.innerHTML = '<div class="ch-empty">상품이 지정되지 않았습니다.<br><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 이동</a></div>';
           return;
         }
 
-        let product, squareBal = 0, pointBal = 0;
+        let items = [], squareBal = 0, pointBal = 0;
         try {
-          product = await api.products.get(productId);
-          if (!product) throw new Error('상품을 찾을 수 없습니다');
+          if (isCart) {
+            const cart = await api.cart.getList();
+            if (!cart || !cart.length) {
+              root.innerHTML = '<div class="ch-empty">장바구니가 비어있습니다.<br><a href="./market.html" style="color:#1F3AE0;font-weight:800;display:inline-block;margin-top:18px;">마켓으로 이동</a></div>';
+              return;
+            }
+            items = cart;
+          } else {
+            const product = await api.products.get(productId);
+            if (!product) throw new Error('상품을 찾을 수 없습니다');
+            items = [product];
+          }
+
+          const getDiscountPointBalance = async () => {
+            try {
+              const res = await fetch(api.API_BASE + '/points/balance/activity', {
+                headers: { 'Authorization': 'Bearer ' + api.getJwt() },
+              });
+              if (res.ok) return await res.json();
+            } catch {}
+            return { balance: 0 };
+          };
 
           const [sq, pt] = await Promise.all([
             api.square.getBalance().catch(() => ({ balance: 0 })),
-            api.point.getBalance().catch(() => ({ balance: 0 })),
+            getDiscountPointBalance().catch(() => ({ balance: 0 })),
           ]);
           squareBal = sq.balance || 0;
           pointBal = pt.balance || 0;
@@ -199,23 +220,29 @@
           return;
         }
 
-        const price = product.priceSquare || 0; // KRW (스펙: 1 Square = 1원)
-        const me = api.getCurrentUser() || {};
+        const price = items.reduce((s, p) => s + (p.priceSquare || 0), 0);
+        const squareGrossTotal = items.reduce((s, p) => s + Math.floor((p.priceSquare || 0) * 1.05), 0);
+        const tossGrossTotal = items.reduce((s, p) => s + Math.floor(Math.floor((p.priceSquare || 0) * 1.05) * 1.10), 0);
+        // 호환 위한 product alias (단일 결제 코드 경로용)
+        const product = items.length === 1 ? items[0] : { id: 'cart', title: items.length + '개 상품', sellerName: '' };
+        let me = api.getCurrentUser() || {};
 
         root.innerHTML = `
           <div class="checkout-grid">
             <div>
               <div class="ch-card">
-                <h2>주문 상품</h2>
-                <p class="sub">아래 상품을 결제합니다.</p>
-                <div class="ch-summary-item">
-                  <img src="${product.imageUrl || (product.cover && /^https?:\/\//i.test(product.cover) ? product.cover : './assets/' + (product.cover || 'cover-01.svg'))}" alt="" onerror="this.src='./assets/cover-01.svg'" />
-                  <div>
-                    <div class="title">${escapeHtml(product.title)}</div>
-                    <div class="seller">판매자 · ${escapeHtml(product.sellerName || '')}</div>
+                <h2>주문 상품 ${isCart ? '<span style="color:#677181;font-weight:700;font-size:14px;">(' + items.length + '건)</span>' : ''}</h2>
+                <p class="sub">${isCart ? '장바구니의 모든 항목을 한 번에 결제합니다.' : '아래 상품을 결제합니다.'}</p>
+                ${items.map(it => `
+                  <div class="ch-summary-item">
+                    <img src="${it.imageUrl || (it.cover && /^https?:\/\//i.test(it.cover) ? it.cover : './assets/' + (it.cover || 'cover-01.svg'))}" alt="" onerror="this.src='./assets/cover-01.svg'" />
+                    <div>
+                      <div class="title">${escapeHtml(it.title)}</div>
+                      <div class="seller">판매자 · ${escapeHtml(it.sellerName || '')}</div>
+                    </div>
+                    <div class="price">₩${n(it.priceSquare || 0)}</div>
                   </div>
-                  <div class="price">₩${n(price)}</div>
-                </div>
+                `).join('')}
               </div>
 
               <div class="ch-card">
@@ -226,7 +253,7 @@
                     <input type="radio" name="method" value="TOSS" checked />
                     <div class="info">
                       <b>Toss Payments 직접 결제</b>
-                      <span>카드/계좌이체로 즉시 ₩${n(price)} 결제</span>
+                      <span>${isCart ? items.length + '개 항목을 합산해 한 번에 카드/계좌이체로 결제' : '카드/계좌이체로 즉시 ₩' + n(price) + ' 결제'}</span>
                     </div>
                   </label>
                   <label>
@@ -276,9 +303,9 @@
           let usePt = Math.max(0, Math.min(parseInt(usePointInput.value, 10) || 0, pointBal, price));
           usePointInput.value = usePt;
           const isSq = method === 'SQUARE';
-          const baseSurcharged = Math.floor(price * 1.05);
+          const baseSurcharged = squareGrossTotal;
           // TOSS(현금)는 추가 10% 환산 수수료. SQUARE는 그대로.
-          const grossAmt = isSq ? baseSurcharged : Math.floor(baseSurcharged * 1.10);
+          const grossAmt = isSq ? baseSurcharged : tossGrossTotal;
           const fee = grossAmt - price;
           const finalAmt = grossAmt - usePt;
           const unit = isSq ? ' Square' : '';
@@ -321,10 +348,35 @@
         useAllBtn.addEventListener('click', () => { usePointInput.value = String(Math.min(pointBal, price)); recalc(); });
         recalc();
 
+        const callbackPaymentKey = qs.get('paymentKey');
+        const callbackOrderId = qs.get('orderId');
+        const callbackAmount = parseInt(qs.get('amount'), 10);
+        if (isCart && qs.get('toss') === 'success' && callbackPaymentKey && callbackOrderId && callbackAmount) {
+          try {
+            const res = await api.payments.confirmCartPay(callbackPaymentKey, callbackOrderId, callbackAmount);
+            t(`${res.count || items.length}건 결제 완료!`);
+            setTimeout(() => { location.href = './mypage.html?tab=purchases'; }, 1200);
+          } catch (e) {
+            t('결제 승인 실패: ' + (e.message || ''));
+          }
+          return;
+        }
+        if (isCart && qs.get('toss') === 'fail') {
+          t('결제가 취소되었거나 실패했습니다.');
+        }
+
         payBtn.addEventListener('click', async () => {
+          // 안전망: 진입 즉시 enable 해서 직전 시도의 잔류 disabled 풀어둠
+          payBtn.disabled = false;
+          // me는 페이지 진입 시 한 번만 잡혀 있으므로, 인증 직후 페이지 안 떠나도 인식되도록 갱신
+          try {
+            const fresh = (await api.user.getMe?.()) || api.getCurrentUser?.() || me;
+            if (fresh) me = fresh;
+          } catch {}
           if (!me.phoneVerified && !me.passVerified) {
-            t('PASS 본인인증이 필요합니다.');
-            setTimeout(() => { location.href = './mypage.html'; }, 1000);
+            t('PASS 본인인증이 필요합니다. 마이페이지에서 인증 후 다시 시도해 주세요.');
+            payBtn.disabled = false;
+            setTimeout(() => { location.href = './mypage.html'; }, 1200);
             return;
           }
           const method = document.querySelector('input[name="method"]:checked').value;
@@ -345,28 +397,53 @@
                 }
                 return;
               }
-              // Square Wallet 결제 — BE /orders/:id/pay/square
-              // 1. 먼저 order 생성 (usedPoint은 여기서 전달)
-              const order = await api.orders.create(product.id, 'SQUARE', usePoint);
-              const orderId = order.id;
-              // 2. Square 결제 확정 (POST /orders/:id/pay/square — txHash 필수)
-              const txHash = 'sq-client-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-              const res = await fetch(api.API_BASE + `/orders/${orderId}/pay/square`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.getJwt() },
-                body: JSON.stringify({ txHash }),
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.message || 'Square 결제 실패');
-              t('Square 결제 완료!');
+              // Square Wallet 결제 — 포인트를 상품별 가격 한도 안에서 나눠 적용
+              const failed = [];
+              let bought = 0;
+              let remainingPoint = usePoint;
+              for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                const pt = Math.min(remainingPoint, it.priceSquare || 0);
+                remainingPoint -= pt;
+                try {
+                  const order = await api.orders.create(it.id, 'SQUARE', pt);
+                  const txHash = 'sq-client-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+                  const res = await fetch(api.API_BASE + `/orders/${order.id}/pay/square`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api.getJwt() },
+                    body: JSON.stringify({ txHash }),
+                  });
+                  if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    throw new Error(d.message || ('결제 실패: ' + it.title));
+                  }
+                  bought++;
+                  if (isCart) { try { await api.cart.remove(it.id); } catch {} }
+                } catch (e) {
+                  failed.push({ title: it.title, msg: e.message });
+                }
+              }
+              if (failed.length) {
+                const first = failed[0]?.msg ? `: ${failed[0].msg}` : '';
+                t(`${bought}건 결제 완료, ${failed.length}건 실패${first}`);
+              } else {
+                t(items.length === 1 ? 'Square 결제 완료!' : `${bought}건 일괄 결제 완료!`);
+              }
               setTimeout(() => { location.href = './mypage.html?tab=purchases'; }, 1200);
             } else {
-              // Toss — 기존 product.html 흐름 재사용 (request → bypass or 진짜 결제창)
+              // Toss — 단일 상품 또는 카트 모드 (cart 모드는 항목 전체 합산해 단일 Toss 세션)
               const cfg = await api.payments.tossConfig();
-              const reqRes = await api.payments.requestProductPay(product.id);
+              const reqRes = isCart
+                ? await api.payments.requestCartPay(items.map(i => i.id), usePoint)
+                : await api.payments.requestProductPay(product.id, usePoint);
               if (cfg.devBypass) {
-                await api.payments.confirmProductPay('dev-fake-key', reqRes.tossOrderId, reqRes.amountKrw);
-                t('결제 완료!');
+                if (isCart) {
+                  const res = await api.payments.confirmCartPay('dev-fake-key', reqRes.tossOrderId, reqRes.amountKrw);
+                  t(`${res.count || items.length}건 결제 완료!`);
+                } else {
+                  await api.payments.confirmProductPay('dev-fake-key', reqRes.tossOrderId, reqRes.amountKrw);
+                  t('결제 완료!');
+                }
                 setTimeout(() => { location.href = './mypage.html?tab=purchases'; }, 1200);
                 return;
               }
@@ -378,8 +455,13 @@
                 });
               }
               const tossPayments = TossPayments(cfg.clientKey);
-              const successUrl = location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=success&amount=' + reqRes.amountKrw;
-              const failUrl = location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=fail';
+              // successUrl: cart 모드는 checkout.html로 콜백, 단일은 product.html로
+              const successUrl = isCart
+                ? location.origin + '/checkout.html?cart=1&toss=success&amount=' + reqRes.amountKrw
+                : location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=success&amount=' + reqRes.amountKrw;
+              const failUrl = isCart
+                ? location.origin + '/checkout.html?cart=1&toss=fail'
+                : location.origin + '/product.html?id=' + encodeURIComponent(product.id) + '&toss=fail';
               tossPayments.requestPayment('카드', {
                 amount: reqRes.amountKrw,
                 orderId: reqRes.tossOrderId,

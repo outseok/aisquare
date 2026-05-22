@@ -92,6 +92,20 @@
       .seller-products h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.2px; }
       .seller-products .sub { color: #677181; font-size: 13.5px; margin: 0 0 20px; }
       .seller-products .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .seller-products .sold-grid .pcard { opacity: 0.62; }
+      .seller-products .sold-grid .pcard::after {
+        content: 'SOLD'; position: absolute; top: 10px; right: 10px;
+        padding: 4px 10px; background: rgba(11, 13, 18, 0.85); color: #fff;
+        font-size: 11px; font-weight: 900; letter-spacing: 0.06em; border-radius: 999px;
+        pointer-events: none;
+      }
+      .seller-products .sold-grid .pcard { position: relative; }
+      .review-item .del-btn {
+        margin-top: 8px; padding: 4px 10px;
+        background: transparent; border: 1px solid #ececf0; border-radius: 6px;
+        font-size: 11.5px; font-weight: 700; color: #c8331f; cursor: pointer;
+      }
+      .review-item .del-btn:hover { background: #fff5f5; border-color: #f3c8c1; }
 
       .seller-reviews { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 24px 24px 20px; position: sticky; top: 120px; }
       .seller-reviews h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; }
@@ -192,8 +206,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=20260524a"></script>
-    <script src="./app.js?v=20260524a"></script>
+    <script src="./api.js?v=1779445200"></script>
+    <script src="./app.js?v=1779445200"></script>
     <script>
       (async function() {
         var api = window.AISquareAPI;
@@ -225,9 +239,9 @@
           var tt = Math.max(0, Math.min(100, stats.trustToken || 0));
           var tier = trustTier(tt);
 
-          // Fetch seller's products
-          var all = await api.products.list({ limit: 100 });
-          var items = (all.items || []).filter(p => (p.sellerUsername === username) || (p.seller && p.seller.username === username));
+          // Fetch seller's products (SOLD 포함 — 판매자 페이지에서만 노출)
+          var all = await api.products.list({ limit: 100, sellerUsername: username, includeSold: '1' });
+          var items = (all.items || []);
 
           // Aggregate all reviews from this seller's products (newest first)
           var allReviews = [];
@@ -284,11 +298,25 @@
 
             <div class="seller-body">
               <div class="seller-products">
-                <h2>판매 중인 노하우</h2>
-                <p class="sub">${items.length}개의 노하우를 판매하고 있습니다.</p>
-                ${items.length === 0
-                  ? '<div class="seller-empty">판매 중인 노하우가 없습니다.</div>'
-                  : '<div class="product-grid">' + items.map(p => productCardHtml(p)).join('') + '</div>'}
+                ${(() => {
+                  const onSale = items.filter(p => p.status === 'ON_SALE');
+                  const sold   = items.filter(p => p.status === 'SOLD');
+                  let html = `
+                    <h2>판매 중인 노하우 <span style="color:#677181;font-weight:700;font-size:14px;">${onSale.length}건</span></h2>
+                    <p class="sub">현재 마켓에서 구매 가능한 상품입니다.</p>
+                    ${onSale.length === 0
+                      ? '<div class="seller-empty" style="padding:32px 0">판매 중인 노하우가 없습니다.</div>'
+                      : '<div class="product-grid">' + onSale.map(p => productCardHtml(p)).join('') + '</div>'}
+                  `;
+                  if (sold.length > 0) {
+                    html += `
+                      <h2 style="margin-top:36px;">판매 완료된 노하우 <span style="color:#677181;font-weight:700;font-size:14px;">${sold.length}건</span></h2>
+                      <p class="sub">이미 판매된 상품 (참고용으로 표시)</p>
+                      <div class="product-grid sold-grid">${sold.map(p => productCardHtml(p)).join('')}</div>
+                    `;
+                  }
+                  return html;
+                })()}
               </div>
 
               <aside class="seller-reviews">
@@ -306,6 +334,25 @@
 
           root.querySelectorAll('.pcard[data-id]').forEach(el => {
             el.addEventListener('click', () => { location.href = './product.html?id=' + encodeURIComponent(el.dataset.id); });
+          });
+
+          // 내 리뷰 삭제 버튼
+          root.querySelectorAll('.del-btn[data-review-id]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const reviewId = btn.dataset.reviewId;
+              if (!reviewId) return;
+              if (!confirm('이 리뷰를 삭제하시겠습니까?\n삭제 후엔 복구할 수 없습니다.')) return;
+              btn.disabled = true; btn.textContent = '삭제 중...';
+              try {
+                await api.reviews.remove(reviewId);
+                btn.closest('.review-item')?.remove();
+                if (window.showToast) window.showToast('리뷰가 삭제되었습니다.');
+              } catch (err) {
+                btn.disabled = false; btn.textContent = '내 리뷰 삭제';
+                alert(err.message || '삭제 실패 — 본인 리뷰만 삭제 가능합니다.');
+              }
+            });
           });
 
         } catch (e) {
@@ -344,6 +391,12 @@
           var who = (r.reviewer && (r.reviewer.name || r.reviewer.username)) || '익명';
           var initial = (who[0] || 'A').toUpperCase();
           var dt = r.createdAt ? new Date(r.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }) : '';
+          // 본인이 쓴 리뷰면 삭제 버튼 표시 (reviewer.username 또는 reviewerId로 매칭)
+          var meUser = (api.getCurrentUser && api.getCurrentUser()) || {};
+          var isMine = !!(r.id && (
+            (r.reviewer && r.reviewer.username && meUser.username && r.reviewer.username === meUser.username) ||
+            (r.reviewerId && meUser.id && r.reviewerId === meUser.id)
+          ));
           return `<div class="review-item">
             <div class="top">
               <span class="av">${initial}</span>
@@ -353,6 +406,7 @@
             </div>
             <div class="content">${escapeHtml(r.content || '')}</div>
             ${r.productTitle && r.productId ? `<a class="product-link" href="./product.html?id=${encodeURIComponent(r.productId)}" title="${escapeHtml(r.productTitle)}"><span class="pl-title">${escapeHtml(r.productTitle)}</span><span class="pl-arrow">→</span></a>` : (r.productTitle ? `<div class="product">— ${escapeHtml(r.productTitle)}</div>` : '')}
+            ${isMine ? `<button type="button" class="del-btn" data-review-id="${r.id}">내 리뷰 삭제</button>` : ''}
           </div>`;
         }
         function escapeHtml(s) {

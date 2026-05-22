@@ -54,4 +54,21 @@ export class PaymentsController {
   confirmProductPay(@Request() req, @Body() dto: ConfirmProductPayDto) {
     return this.paymentsService.confirmProductPay(req.user.id, dto);
   }
+
+  // ── 장바구니 일괄 Toss 결제 ─────────────────────────────────────────────────
+  @Post('toss/cart/request')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PassVerifiedGuard)
+  @ApiOperation({ summary: '장바구니 일괄 원화 결제 요청 (모든 상품 합산 → 단일 Toss 세션)' })
+  requestCartPay(@Request() req, @Body() body: { productIds: string[]; usedPoint?: number }) {
+    return this.paymentsService.requestCartPay(req.user.id, body.productIds || [], body.usedPoint || 0);
+  }
+
+  @Post('toss/cart/confirm')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PassVerifiedGuard)
+  @ApiOperation({ summary: '장바구니 일괄 원화 결제 승인 (모든 항목 일괄 주문 생성)' })
+  confirmCartPay(@Request() req, @Body() dto: ConfirmProductPayDto) {
+    return this.paymentsService.confirmCartPay(req.user.id, dto);
+  }
 }

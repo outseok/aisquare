@@ -124,9 +124,16 @@ export class PaymentsService {
     if (product.status !== 'ON_SALE') throw new BadRequestException('구매 불가 상태의 상품입니다');
     if (product.sellerId === buyerId) throw new BadRequestException('본인 상품은 구매할 수 없습니다');
 
-    // Toss(현금) 결제는 5% 거래 수수료 + 10% 현금↔Square 환산 수수료 둘 다 부과 = price × 1.05 × 1.10
-    const amountKrw = Math.floor(Math.floor(product.price * 1.05) * 1.10);
-    const priceRp = Math.floor((amountKrw * 100) / KRW_PER_100RP);
+    // Toss(현금) 결제는 5% 거래 수수료 + 10% 현금↔Square 환산 수수료 = price × 1.05 × 1.10
+    const grossKrw = Math.floor(Math.floor(product.price * 1.05) * 1.10);
+    // Point 할인 적용 (1 Point = 1원). 보유 Point 한도 내로 강제
+    let usedPoint = Math.max(0, Math.floor(dto.usedPoint || 0));
+    if (usedPoint > 0) {
+      const currentPoints = await this.getActivityPointBalance(buyerId);
+      usedPoint = Math.min(usedPoint, currentPoints, product.price);
+    }
+    const amountKrw = Math.max(0, grossKrw - usedPoint);
+    const priceRp = Math.floor((grossKrw * 100) / KRW_PER_100RP);
     const tossOrderId = `prod-${uuidv4()}`;
 
     await this.prisma.tossPayment.create({
@@ -138,10 +145,12 @@ export class PaymentsService {
         status: 'PENDING',
         relatedId: dto.productId,
         rpGranted: priceRp,
+        // usedPoint 정보는 metadata 컬럼이 없으니 별도 record로 추적은 불가
+        // confirm 시 다시 한 번 차감되도록 amountKrw에 이미 반영됨
       },
     });
 
-    return { tossOrderId, amountKrw, orderName: product.title };
+    return { tossOrderId, amountKrw, orderName: product.title, usedPoint, grossKrw };
   }
 
   async confirmProductPay(buyerId: string, dto: ConfirmProductPayDto) {
@@ -166,6 +175,21 @@ export class PaymentsService {
       throw new BadRequestException('상품 상태가 변경되어 결제를 취소했습니다');
     }
 
+    // Point 할인 사용 추정 — 정가(grossKrw) - 실결제액(amount)
+    const grossKrw = Math.floor(Math.floor(product.price * 1.05) * 1.10);
+    const usedPoint = Math.max(0, grossKrw - dto.amount);
+    if (usedPoint > 0) {
+      const activityBalance = await this.getActivityPointBalance(buyerId);
+      if (activityBalance < usedPoint) {
+        await this.cancelWithToss(dto.paymentKey, 'ACTIVITY 포인트 잔액 부족');
+        await this.prisma.tossPayment.update({
+          where: { tossOrderId: dto.orderId },
+          data: { status: 'CANCELLED' },
+        });
+        throw new BadRequestException(`ACTIVITY 포인트 잔액 부족: 보유 ${activityBalance}P / 사용 ${usedPoint}P`);
+      }
+    }
+
     const priceRp = record.rpGranted!;
     const autoConfirmAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
@@ -174,6 +198,20 @@ export class PaymentsService {
         where: { tossOrderId: dto.orderId },
         data: { paymentKey: dto.paymentKey, status: 'CONFIRMED' },
       });
+
+      if (usedPoint > 0) {
+        const balance = await this.getPointBalance(buyerId, tx);
+        await tx.pointLog.create({
+          data: {
+            userId: buyerId,
+            type: 'USE_PURCHASE',
+            category: 'ACTIVITY' as any,
+            amount: -usedPoint,
+            balance: balance - usedPoint,
+            memo: `Toss 결제 Point 할인: ${product.title}`,
+          },
+        });
+      }
 
       const newOrder = await tx.order.create({
         data: {
@@ -254,5 +292,166 @@ export class PaymentsService {
       orderBy: { createdAt: 'desc' },
     });
     return latest?.balance ?? 0;
+  }
+
+  private async getActivityPointBalance(userId: string, tx?: any): Promise<number> {
+    const client = tx ?? this.prisma;
+    const agg = await client.pointLog.aggregate({
+      where: { userId, category: 'ACTIVITY' },
+      _sum: { amount: true },
+    });
+    return agg._sum.amount ?? 0;
+  }
+
+  // ── 장바구니 일괄 Toss 결제 ─────────────────────────────────────────────────
+  async requestCartPay(buyerId: string, productIds: string[], usedPointReq: number = 0) {
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      throw new BadRequestException('결제할 상품이 없습니다');
+    }
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+    });
+    if (products.length !== productIds.length) {
+      throw new NotFoundException('일부 상품을 찾을 수 없습니다');
+    }
+    for (const p of products) {
+      if (p.status !== 'ON_SALE') throw new BadRequestException(`판매중 아님: ${p.title}`);
+      if (p.sellerId === buyerId) throw new BadRequestException(`본인 상품 포함: ${p.title}`);
+    }
+    // 각 항목 price × 1.05 × 1.10 (Toss 5% + 환산 10%) 의 합
+    const grossKrw = products.reduce(
+      (s, p) => s + Math.floor(Math.floor(p.price * 1.05) * 1.10),
+      0,
+    );
+    const productTotal = products.reduce((s, p) => s + p.price, 0);
+    // Point 할인 (1 Point = 1원, ACTIVITY 보유 한도)
+    let usedPoint = Math.max(0, Math.floor(usedPointReq || 0));
+    if (usedPoint > 0) {
+      const bal = await this.getActivityPointBalance(buyerId);
+      usedPoint = Math.min(usedPoint, bal, productTotal);
+    }
+    const amountKrw = Math.max(0, grossKrw - usedPoint);
+    const priceRp = Math.floor((grossKrw * 100) / KRW_PER_100RP);
+    const tossOrderId = `cart-${uuidv4()}`;
+    await this.prisma.tossPayment.create({
+      data: {
+        userId: buyerId,
+        tossOrderId,
+        amount: amountKrw,
+        purpose: 'PRODUCT_PURCHASE',
+        status: 'PENDING',
+        relatedId: productIds.join(','),
+        rpGranted: priceRp,
+      },
+    });
+    const orderName = products.length === 1
+      ? products[0].title
+      : `${products[0].title} 외 ${products.length - 1}건`;
+    return { tossOrderId, amountKrw, orderName, count: products.length, usedPoint, grossKrw };
+  }
+
+  async confirmCartPay(buyerId: string, dto: ConfirmProductPayDto) {
+    const record = await this.prisma.tossPayment.findUnique({
+      where: { tossOrderId: dto.orderId },
+    });
+    if (!record) throw new NotFoundException('결제 정보를 찾을 수 없습니다');
+    if (record.userId !== buyerId) throw new BadRequestException('본인 결제만 처리 가능합니다');
+    if (record.status !== 'PENDING') throw new BadRequestException('이미 처리된 결제입니다');
+    if (record.amount !== dto.amount) throw new BadRequestException('결제 금액이 일치하지 않습니다');
+
+    // Toss 한 번만 confirm (전체 금액)
+    await this.confirmWithToss(dto.paymentKey, dto.orderId, dto.amount);
+
+    const productIds = (record.relatedId || '').split(',').filter(Boolean);
+    const products = await this.prisma.product.findMany({ where: { id: { in: productIds } } });
+    const stillOnSale = products.filter((p) => p.status === 'ON_SALE');
+    if (stillOnSale.length === 0) {
+      await this.cancelWithToss(dto.paymentKey, '모든 상품이 이미 판매됨');
+      await this.prisma.tossPayment.update({
+        where: { tossOrderId: dto.orderId },
+        data: { status: 'CANCELLED' },
+      });
+      throw new BadRequestException('모든 상품 상태가 변경되어 결제를 취소했습니다');
+    }
+
+    // Point 할인 사용 추정 (전체 합산 정가 - 실결제액)
+    const grossKrwTotal = stillOnSale.reduce(
+      (s, p) => s + Math.floor(Math.floor(p.price * 1.05) * 1.10),
+      0,
+    );
+    const usedPoint = Math.max(0, grossKrwTotal - dto.amount);
+    if (usedPoint > 0) {
+      const activityBalance = await this.getActivityPointBalance(buyerId);
+      if (activityBalance < usedPoint) {
+        await this.cancelWithToss(dto.paymentKey, 'ACTIVITY 포인트 잔액 부족');
+        await this.prisma.tossPayment.update({
+          where: { tossOrderId: dto.orderId },
+          data: { status: 'CANCELLED' },
+        });
+        throw new BadRequestException(`ACTIVITY 포인트 잔액 부족: 보유 ${activityBalance}P / 사용 ${usedPoint}P`);
+      }
+    }
+
+    const autoConfirmAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    const createdOrders: any[] = [];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tossPayment.update({
+        where: { tossOrderId: dto.orderId },
+        data: { paymentKey: dto.paymentKey, status: 'CONFIRMED' },
+      });
+      // Point 차감 로그 (1건만)
+      if (usedPoint > 0) {
+        const balance = await this.getPointBalance(buyerId, tx);
+        await tx.pointLog.create({
+          data: {
+            userId: buyerId,
+            type: 'USE_PURCHASE',
+            category: 'ACTIVITY' as any,
+            amount: -usedPoint,
+            balance: balance - usedPoint,
+            memo: `장바구니 일괄 Toss 결제 Point 할인 (${stillOnSale.length}건)`,
+          },
+        });
+      }
+      for (const product of stillOnSale) {
+        const perItem = Math.floor(Math.floor(product.price * 1.05) * 1.10);
+        const order = await tx.order.create({
+          data: {
+            buyerId,
+            productId: product.id,
+            paymentMethod: 'TOSS',
+            paymentAmount: perItem,
+            autoConfirmAt,
+            status: 'PENDING_CONFIRMATION',
+          },
+        });
+        await tx.product.update({
+          where: { id: product.id },
+          data: { status: 'SOLD' },
+        });
+        await tx.cartItem.deleteMany({ where: { userId: buyerId, productId: product.id } }).catch(() => null);
+        createdOrders.push({ order, product });
+      }
+    });
+
+    // Fabric 에스크로 락업 + 거래 원장 (각 주문 별로)
+    for (const { order, product } of createdOrders) {
+      const perItem = order.paymentAmount;
+      const priceRp = Math.floor((perItem * 100) / KRW_PER_100RP);
+      await this.fabric
+        .lockEscrow(order.id, buyerId, product.sellerId, priceRp, 'TOSS', 0, autoConfirmAt)
+        .catch((e) => this.logger.warn(`Fabric lockEscrow 실패 (${order.id}): ${e?.message}`));
+      await this.fabric
+        .recordTrade(order.id, product.id, buyerId, product.sellerId, priceRp, 'TOSS')
+        .catch((e) => this.logger.warn(`Fabric recordTrade 실패 (${order.id}): ${e?.message}`));
+    }
+
+    return {
+      success: true,
+      orderIds: createdOrders.map((o) => o.order.id),
+      count: createdOrders.length,
+      soldOut: products.length - stillOnSale.length,
+    };
   }
 }

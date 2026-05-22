@@ -12,20 +12,32 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useStaticAssets(join(__dirname, '..', 'test'), { prefix: '/test' });
 
+  // ── 정적 프론트엔드 동시 서빙 (단일 터널/도메인으로 풀스택 노출) ────────
+  // ../../frontend  ← repo의 frontend 디렉토리
+  // SERVE_FRONTEND=false 환경변수로 끄기 가능
+  if (process.env.SERVE_FRONTEND !== 'false') {
+    const feDir = join(__dirname, '..', '..', 'frontend');
+    app.useStaticAssets(feDir, { index: ['index.html'] });
+    console.log(`Frontend static 서빙: ${feDir}`);
+  }
+
   // CORS — localhost 어떤 포트든 허용 + .env의 FRONTEND_URL 추가 허용
   // (정적 프론트(8000), Vite(5173), Next(3000 등) 모두 커버)
   const allowList = (process.env.FRONTEND_URL || 'http://localhost:8000,http://localhost:5173,http://localhost:3000,http://127.0.0.1:8000,http://127.0.0.1:5173')
     .split(',').map(s => s.trim()).filter(Boolean);
   app.enableCors({
     origin: (origin, callback) => {
-      // 같은 머신 fetch (origin 없음) 또는 화이트리스트 매칭, 또는 localhost:* 전부 허용
       if (!origin) return callback(null, true);
       if (allowList.includes(origin)) return callback(null, true);
+      // localhost / 127.0.0.1 (개발)
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+      // cloudflare quick tunnel (*.trycloudflare.com)
+      if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(origin)) return callback(null, true);
+      // ngrok / loca.lt / serveo 같은 다른 터널들도 허용
+      if (/^https:\/\/[a-z0-9-]+\.(ngrok\.io|ngrok-free\.app|loca\.lt|serveo\.net)$/.test(origin)) return callback(null, true);
       callback(new Error('CORS: origin not allowed → ' + origin), false);
     },
     credentials: true,
-    // FE가 다운로드 파일명 읽기 위해 Content-Disposition 노출 필요
     exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
   });
 
