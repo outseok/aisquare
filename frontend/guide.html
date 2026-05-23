@@ -328,9 +328,9 @@
             </article>
             <article class="step-card" data-flow="buy">
               <span class="step-num">03</span>
-              <h3>Square로 결제</h3>
-              <p>지갑에 Square를 충전해 결제합니다. 결제 즉시 자료를 다운로드할 수 있어요.</p>
-              <div class="step-meta">결제 수단 · Square / 포인트</div>
+              <h3>결제하기</h3>
+              <p>Toss Payments 카드/계좌이체로 현금 결제하거나, 미리 충전해 둔 Square Wallet에서 차감할 수 있습니다. 보유한 Point는 1 Point = 1원으로 즉시 할인 적용돼요.</p>
+              <div class="step-meta">결제 수단 · 현금(Toss) / Square / Point 복합 사용 가능</div>
             </article>
             <article class="step-card" data-flow="buy">
               <span class="step-num">04</span>
@@ -361,15 +361,15 @@
             </article>
             <article class="step-card" data-flow="sell">
               <span class="step-num">03</span>
-              <h3>검수 &amp; 노출</h3>
-              <p>저작권·민감정보 자동 검수 후 24시간 내 승인. 카테고리·랭킹·검색에 자동 노출됩니다.</p>
-              <div class="step-meta">검수 기준 · AISquare 안전 정책</div>
+              <h3>자동 검수 &amp; 즉시 노출</h3>
+              <p>업로드 파일은 자동 바이러스 검사(ClamAV)와 링크 안전 검사(Google Safe Browsing)를 통과하면 즉시 마켓·랭킹·검색에 노출됩니다.</p>
+              <div class="step-meta">검수 기준 · ClamAV + Google Safe Browsing</div>
             </article>
             <article class="step-card" data-flow="sell">
               <span class="step-num">04</span>
               <h3>정산 받기</h3>
-              <p>구매 확정 시 표시 가격의 95%가 Square Wallet에 정산되고, 추가로 2%가 Square 캐시백으로 적립됩니다. 등록 계좌로 출금 신청하면 영업일 내 입금돼요.</p>
-              <div class="step-meta">판매자 수수료 5% (정산 95%) · 판매자 캐시백 +2% Square · 구매자는 가격 위 +5% 결제, 캐시백 +2% Square</div>
+              <p>구매 확정 시 표시 가격의 95%가 Square Wallet에 자동 정산되고, 추가로 2%가 PAID 포인트로 캐시백 적립됩니다. PAID 포인트는 NaverPay 등 외부 파트너 포인트로 전환 가능해요.</p>
+              <div class="step-meta">판매자 정산 95% Square · 판매자 캐시백 +2% PAID 포인트 · 구매자는 가격 위 +5% 결제, 캐시백 +2% PAID 포인트</div>
             </article>
           </div>
         </div>
@@ -457,8 +457,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779512213"></script>
-    <script src="./app.js?v=1779512213"></script>
+    <script src="./api.js?v=1779514653"></script>
+    <script src="./app.js?v=1779514653"></script>
     <script>
       // Buy/Sell flow toggle
       (function () {
