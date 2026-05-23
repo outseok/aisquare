@@ -964,11 +964,9 @@ function prettifyHistoryDescription(item) {
   if ((m = raw.match(/신고 환불 포인트 복구.*?order=([\w-]+)/))) {
     return `환불 — 사용 포인트 복원 (주문 #${m[1].slice(-6)})`;
   }
-  // 정산 계좌로 환불 송금 — memo 안에 은행/계좌 정보가 박혀 있어서 사후 계좌 등록 영향 없음
-  if ((m = raw.match(/정산 계좌로 환불 송금.*?order=([\w-]+).*?→\s*(\S+)\s+([\d-]+)/))) {
-    const digits = String(m[3]).replace(/\D/g, "");
-    const tail = digits.slice(-4) || "****";
-    return `정산 계좌로 환불 송금 — ${m[2]} ***${tail} (주문 #${m[1].slice(-6)})`;
+  // 환불 — 실제로는 Square 지갑으로 복원됨 (memo의 은행 정보는 무시)
+  if ((m = raw.match(/정산 계좌로 환불 송금.*?order=([\w-]+)/))) {
+    return `Square 지갑으로 환불 (주문 #${m[1].slice(-6)})`;
   }
   if ((m = raw.match(/신고 환불.*?order=([\w-]+)/))) {
     // 정산 계좌가 없어 Square 지갑으로 환불된 경우 (memo에 은행 정보 없음)
@@ -981,7 +979,8 @@ function prettifyHistoryDescription(item) {
     return `판매 정산 +${fmt(m[1])} Square (주문 #${m[2].slice(-6)})`;
   }
   if ((m = raw.match(/구매 캐시백[^=]*?=(\d+).*?order=([\w-]+)/))) {
-    return `구매 캐시백 +${fmt(m[1])} Square (주문 #${m[2].slice(-6)})`;
+    // 캐시백은 더 이상 Square가 아닌 PAID 포인트로 지급됨 → Square 거래내역에서 숨김
+    return null;
   }
   if ((m = raw.match(/즉시 충전\s*([\d,]+)원.*?([\d,]+)\s*SQ/))) {
     return `Square 충전 +${m[2]} SQ (${m[1]}원)`;
@@ -1372,7 +1371,7 @@ async function renderWallet(root, api, showToast) {
 
       <div class="wallet-info">
         ${isSquare
-          ? `• 결제 시 <b>1 Square = 1원</b><br>• 충전 시 <b>1,000 Square = 1,100원</b> (수수료 10% 포함)<br>• 거래 시 판매자 5% / 구매자 5% 부담 (양쪽 <b>2% Square 캐시백</b> 적립)`
+          ? `• 결제 시 <b>1 Square = 1원</b><br>• 충전 시 <b>1,000 Square = 1,100원</b> (수수료 10% 포함)<br>• 구매 확정 시 양쪽 2% 캐시백은 <b>PAID 포인트 탭</b>에서 확인`
           : `• <b>리뷰 작성</b> 시 +100 Point (ACTIVITY)<br>• <b>이벤트 보상</b> (ACTIVITY)<br>• ACTIVITY 포인트는 <b>출금·외부 전환 불가</b> · 사이트 내 결제 할인 전용<br>• 충전·구매 캐시백(PAID)은 <b>포인트 전환 탭</b>에서 확인·전환`}
       </div>
 
@@ -1380,9 +1379,11 @@ async function renderWallet(root, api, showToast) {
       ${hist.items.length === 0
         ? `<div class="empty-state"><strong>내역이 없습니다</strong></div>`
         : `<div class="history-list">${hist.items.map(it => {
+            const label = prettifyHistoryDescription(it);
+            if (!label) return '';  // null/빈값이면 카드 숨김 (캐시백 등 옛 항목)
             const isIn = it.amount > 0;
             return `<div class="history-row">
-              <div class="meta"><strong><span style="display:inline-flex;align-items:center;gap:6px">${isIn ? ICON.arrowIn : ICON.arrowOut}${esc(prettifyHistoryDescription(it))}</span></strong><time>${fmtDate(it.createdAt)}</time></div>
+              <div class="meta"><strong><span style="display:inline-flex;align-items:center;gap:6px">${isIn ? ICON.arrowIn : ICON.arrowOut}${esc(label)}</span></strong><time>${fmtDate(it.createdAt)}</time></div>
               <span class="amt ${isIn ? "plus" : "minus"}">${isIn ? "+" : ""}${n(it.amount)}</span>
             </div>`;
           }).join("")}</div>`}

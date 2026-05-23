@@ -454,6 +454,34 @@ export class OrdersService {
     const cashback = Math.floor(price * 0.02);
     const platformRev = Math.floor(price * 0.06);
 
+    // 구매자·판매자 각자 PAID 포인트로 캐시백 2% 지급
+    // (Square Wallet이 아니라 Point Wallet의 PAID 카테고리 — 네이버 전환 가능 포인트)
+    if (cashback > 0) {
+      for (const userId of [buyerId, sellerId]) {
+        const latest = await this.prisma.pointLog.findFirst({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+        });
+        const newBalance = (latest?.balance ?? 0) + cashback;
+        await this.prisma.pointLog.create({
+          data: {
+            userId,
+            type: 'EARN_PAID' as any,
+            category: 'PAID' as any,
+            amount: cashback,
+            balance: newBalance,
+            memo: `구매 확정 캐시백 2% (PAID): ${productTitle}`,
+          },
+        });
+        // Fabric naver-channel exchange chaincode에도 동기화 (외부 전환 가능)
+        try {
+          await this.fabric.issuePaid(userId, cashback, `cashback ${productTitle}`);
+        } catch (e: any) {
+          this.logger.warn(`Fabric issuePaid 캐시백 실패 (DB만 기록): ${e?.message}`);
+        }
+      }
+    }
+
     await this.prisma.adminLog.create({
       data: {
         adminId: 'system',
@@ -467,7 +495,7 @@ export class OrdersService {
           buyerCashback: cashback,
           platformRevenue: platformRev,
           rate: 0.06,
-          cashbackCurrency: 'SQUARE',
+          cashbackCurrency: 'PAID_POINT',
         },
       },
     });

@@ -183,8 +183,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./api.js?v=1779445200"></script>
-    <script src="./app.js?v=1779445200"></script>
+    <script src="./api.js?v=1779512213"></script>
+    <script src="./app.js?v=1779512213"></script>
     <script>
       (async function() {
         var api = window.AISquareAPI;
@@ -272,7 +272,7 @@
                 <div class="stat-card"><div class="lbl">에스크로 보류</div><div class="val">${fmt(num(s.hold))}<em>건</em></div></div>
                 <div class="stat-card"><div class="lbl">환불액</div><div class="val">${fmt(krw(s.refunded))}<em>원</em></div></div>
               </div>
-              <p class="sub" style="color:#87909d;font-size:12.5px;margin-top:16px;">정산 정책: 판매자 정산 95% + 양쪽 2% Square 캐시백 + 플랫폼 6%. 구매자는 표시 가격 위에 5% 추가 결제(가격×1.05).</p>
+              <p class="sub" style="color:#87909d;font-size:12.5px;margin-top:16px;">정산 정책: 판매자 정산 95% + 양쪽 2% PAID 포인트 캐시백 + 플랫폼 6%. 구매자는 표시 가격 위에 5% 추가 결제(가격×1.05).</p>
             `;
           } catch (e) {
             panel.innerHTML = '<div class="ad-empty">대시보드 로드 실패: ' + (e.message||'') + '</div>';
